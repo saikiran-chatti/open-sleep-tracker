@@ -213,4 +213,80 @@ class AudioClassificationAgent: ObservableObject {
 - User-reported health benefits correlation
 - Long-term health outcome analysis
 
+## MCP Server Integration
+
+### Documentation and Development Support
+The AI agents leverage MCP (Model Context Protocol) servers to enhance development capabilities and access up-to-date documentation:
+
+**Context7 MCP Server**:
+- **Purpose**: Fetch latest library documentation and API references
+- **Capabilities**: 
+  - Resolve library IDs for Swift packages and frameworks
+  - Retrieve comprehensive documentation for Apple frameworks (SwiftUI, UIKit, Core ML, etc.)
+  - Access up-to-date API references and code examples
+  - Support for both stable and beta framework versions
+- **Integration**: Automatically used for code generation, setup, and configuration steps
+- **Benefits**: Ensures agents work with current APIs and best practices
+
+**Xcode MCP Server**:
+- **Purpose**: Direct Xcode project management and iOS development operations
+- **Capabilities**:
+  - Project information retrieval and analysis
+  - Build and test execution with various configurations
+  - Scheme management and destination targeting
+  - Code signing information and certificate management
+  - Swift Package Manager operations
+  - Simulator management and device deployment
+  - Archive creation and distribution preparation
+- **Integration**: Seamless iOS development workflow automation
+- **Benefits**: Enables agents to perform complex Xcode operations programmatically
+
+**Apple Developer Documentation MCP Server**:
+- **Purpose**: Access comprehensive Apple Developer resources
+- **Capabilities**:
+  - Search Apple Developer Documentation for APIs and frameworks
+  - Access WWDC session content, transcripts, and code examples
+  - Browse sample code projects and implementation patterns
+  - Find related APIs and platform compatibility information
+  - Access technology overviews and best practices guides
+- **Integration**: Enhanced learning and implementation guidance
+- **Benefits**: Ensures agents have access to official Apple resources and latest development practices
+
+**Filesystem MCP Server**:
+- **Purpose**: Direct file system operations and project file management
+- **Capabilities**:
+  - **File Operations**: Read, write, create, and delete files
+  - **Directory Management**: Create, list, and navigate directories
+  - **File Movement**: Move and rename files across the project
+  - **File Search**: Recursive file pattern matching and discovery
+  - **File Information**: Get detailed metadata (size, permissions, timestamps)
+  - **Bulk Operations**: Read multiple files simultaneously
+  - **Media Support**: Handle images and audio files with base64 encoding
+- **Integration**: Seamless project file manipulation and code generation
+- **Benefits**: 
+  - Agents can create, modify, and organize project files directly
+  - One-time permission model for comprehensive file system access
+  - Supports both text and binary file operations
+  - Enables automated project scaffolding and file management
+
+### MCP Server Workflow
+1. **Development Phase**: Context7 and Apple Docs servers provide up-to-date documentation
+2. **Implementation Phase**: 
+   - Xcode MCP server enables automated project management
+   - Filesystem MCP server handles file creation, modification, and organization
+3. **Testing Phase**: Xcode MCP server facilitates automated testing and deployment
+4. **Maintenance Phase**: All servers work together to keep the app current with latest APIs
+5. **File Management**: Filesystem MCP server provides continuous file operations throughout all phases
+
+### Agent-MCP Integration Benefits
+- **Real-time Documentation**: Agents always work with current API references
+- **Automated Development**: Complex Xcode operations handled programmatically
+- **File System Access**: Direct file creation, modification, and project organization
+- **One-time Permissions**: Streamlined workflow with comprehensive file system access
+- **Best Practices**: Access to official Apple guidelines and WWDC content
+- **Version Management**: Support for both stable and beta framework versions
+- **Comprehensive Coverage**: Full Apple ecosystem documentation, tools, and file management access
+
+This MCP server integration ensures the AI agents maintain the highest standards of iOS development while staying current with Apple's rapidly evolving ecosystem.
+
 This AI agent architecture ensures a robust, intelligent, and user-centric snore detection application that leverages the full power of Apple's ecosystem while maintaining privacy and performance excellence.
