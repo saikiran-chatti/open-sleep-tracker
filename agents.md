@@ -289,4 +289,59 @@ The AI agents leverage MCP (Model Context Protocol) servers to enhance developme
 
 This MCP server integration ensures the AI agents maintain the highest standards of iOS development while staying current with Apple's rapidly evolving ecosystem.
 
+## Development Workflow and Git Practices
+
+### Automated Git Integration
+The AI agents follow a structured development workflow that includes automatic git operations for version control:
+
+**Git Workflow Process**:
+1. **Code Changes**: Agents make modifications to project files using available tools
+2. **Automatic Staging**: Run `git add .` to stage all changes after completing work
+3. **Descriptive Commits**: Create detailed commit messages following conventional commit format
+4. **Change Documentation**: Update agents.md to record significant workflow changes and patterns
+
+**Commit Message Format**:
+```
+feat: Brief description of the main change
+
+- Detailed bullet point of specific changes
+- Another specific change or improvement
+- Technical details or implementation notes
+- Any fixes or optimizations made
+```
+
+**Example Commit**:
+```
+feat: Implement sophisticated glass morphism UI with advanced animations
+
+- Replace basic UI with modern glass morphism design using native SwiftUI materials
+- Add dynamic background system with animated overlays and floating particles
+- Implement custom GlassCard components with gradient strokes and shadows
+- Create advanced animation system with pulse effects and spring physics
+- Add glass button styles with multiple variants (primary, destructive, secondary)
+- Implement sophisticated color gradients and typography hierarchy
+- Add real-time data visualization with smooth transitions
+- Optimize for dark mode with proper contrast ratios
+- Create interactive feedback system for all user interactions
+- Build comprehensive mock data system for UI development
+- Fix timer scope issues and improve code organization
+- Add tab-based navigation with Dashboard, Sleep Tracking, Analytics, and Settings
+```
+
+### Workflow Memory System
+**Agents.md Integration**:
+- **Purpose**: Maintain persistent memory of development patterns and workflows
+- **Updates**: Agents automatically update agents.md when introducing new patterns
+- **Content**: Records significant architectural decisions, tool usage patterns, and workflow improvements
+- **Benefits**: Ensures consistency across development sessions and maintains institutional knowledge
+
+**Key Workflow Principles**:
+- **Always commit changes** after completing significant work
+- **Use descriptive commit messages** that explain both what and why
+- **Update documentation** when introducing new patterns or workflows
+- **Maintain clean git history** with logical, atomic commits
+- **Document architectural decisions** for future reference
+
+This development workflow ensures that all changes are properly tracked, documented, and maintainable across the project lifecycle.
+
 This AI agent architecture ensures a robust, intelligent, and user-centric snore detection application that leverages the full power of Apple's ecosystem while maintaining privacy and performance excellence.
