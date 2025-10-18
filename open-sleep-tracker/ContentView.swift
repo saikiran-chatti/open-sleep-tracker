@@ -8,10 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var isRecording = false
-    @State private var snoreLevel: Double = 0.0
-    @State private var recordingDuration: TimeInterval = 0
-    @State private var timer: Timer?
+    @StateObject private var audioRecorder = AudioRecorder()
     @State private var selectedTab = 0
     @State private var pulseAnimation = false
     @State private var glowAnimation = false
@@ -28,14 +25,10 @@ struct ContentView: View {
             TabView(selection: $selectedTab) {
                 // Dashboard Tab
                 DashboardView(
-                    isRecording: $isRecording,
-                    snoreLevel: $snoreLevel,
-                    recordingDuration: $recordingDuration,
+                    audioRecorder: audioRecorder,
                     pulseAnimation: $pulseAnimation,
                     glowAnimation: $glowAnimation,
-                    glassNamespace: glassNamespace,
-                    startRecording: startRecording,
-                    stopRecording: stopRecording
+                    glassNamespace: glassNamespace
                 )
                 .tabItem {
                     Image(systemName: "house.fill")
@@ -45,9 +38,7 @@ struct ContentView: View {
                 
                 // Sleep Tracking Tab
                 SleepTrackingView(
-                    isRecording: $isRecording,
-                    snoreLevel: $snoreLevel,
-                    recordingDuration: $recordingDuration,
+                    audioRecorder: audioRecorder,
                     pulseAnimation: $pulseAnimation,
                     glassNamespace: glassNamespace
                 )
@@ -57,13 +48,21 @@ struct ContentView: View {
                 }
                 .tag(1)
                 
+                // Recordings Tab
+                RecordingsView(audioRecorder: audioRecorder, glassNamespace: glassNamespace)
+                .tabItem {
+                    Image(systemName: "waveform")
+                    Text("Recordings")
+                }
+                .tag(2)
+                
                 // Analytics Tab
                 AnalyticsView(glassNamespace: glassNamespace)
                 .tabItem {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                     Text("Analytics")
                 }
-                .tag(2)
+                .tag(3)
                 
                 // Settings Tab
                 SettingsView(glassNamespace: glassNamespace)
@@ -71,7 +70,7 @@ struct ContentView: View {
                     Image(systemName: "gear")
                     Text("Settings")
                 }
-                .tag(3)
+                .tag(4)
             }
             .accentColor(.white)
             .preferredColorScheme(.dark)
@@ -144,49 +143,6 @@ struct ContentView: View {
         }
     }
     
-    private func startRecording() {
-        isRecording = true
-        recordingDuration = 0
-        startTimer()
-        startMockDataGeneration()
-        withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
-            pulseAnimation = true
-        }
-    }
-    
-    private func stopRecording() {
-        isRecording = false
-        stopTimer()
-        pulseAnimation = false
-    }
-    
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            recordingDuration += 0.1
-        }
-    }
-    
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-        recordingDuration = 0
-    }
-    
-    private func startMockDataGeneration() {
-        Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { timer in
-            if !isRecording {
-                timer.invalidate()
-                return
-            }
-            
-            let randomValue = Double.random(in: 0...1)
-            if randomValue > 0.7 {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    snoreLevel = Double.random(in: 0.3...1.0)
-                }
-            }
-        }
-    }
     
     private func formatDuration(_ duration: TimeInterval) -> String {
         let hours = Int(duration) / 3600
@@ -197,14 +153,10 @@ struct ContentView: View {
 
 // MARK: - Dashboard View
 struct DashboardView: View {
-    @Binding var isRecording: Bool
-    @Binding var snoreLevel: Double
-    @Binding var recordingDuration: TimeInterval
+    @ObservedObject var audioRecorder: AudioRecorder
     @Binding var pulseAnimation: Bool
     @Binding var glowAnimation: Bool
     let glassNamespace: Namespace.ID
-    let startRecording: () -> Void
-    let stopRecording: () -> Void
     
     var body: some View {
         ScrollView {
@@ -305,7 +257,7 @@ struct DashboardView: View {
                 Spacer()
             }
             
-            if isRecording {
+            if audioRecorder.isRecording {
                 recordingActiveView
             } else {
                 recordingInactiveView
@@ -338,14 +290,14 @@ struct DashboardView: View {
                 
                 Spacer()
                 
-                Text(formatDuration(recordingDuration))
+                Text(formatDuration(audioRecorder.recordingDuration))
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.white)
             }
             
             // Duration display
-            Text(formatDuration(recordingDuration))
+            Text(formatDuration(audioRecorder.recordingDuration))
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(
@@ -366,21 +318,22 @@ struct DashboardView: View {
                 HStack(spacing: 8) {
                     ForEach(0..<5, id: \.self) { index in
                         Circle()
-                            .fill(index < Int(snoreLevel * 5) ? .orange : .white.opacity(0.2))
+                            .fill(index < Int(audioRecorder.audioLevel * 5) ? .orange : .white.opacity(0.2))
                             .frame(width: 16, height: 16)
-                            .scaleEffect(index < Int(snoreLevel * 5) ? 1.2 : 1.0)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: snoreLevel)
+                            .scaleEffect(index < Int(audioRecorder.audioLevel * 5) ? 1.2 : 1.0)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: audioRecorder.audioLevel)
                     }
                 }
                 
-                Text("\(Int(snoreLevel * 100))%")
+                Text("\(Int(audioRecorder.audioLevel * 100))%")
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(.white.opacity(0.7))
             }
             
             Button("Stop Session") {
-                stopRecording()
+                audioRecorder.stopRecording()
+                pulseAnimation = false
             }
             .buttonStyle(GlassButtonStyle(style: .destructive))
         }
@@ -412,7 +365,10 @@ struct DashboardView: View {
                 .lineLimit(3)
             
             Button("Start Sleep Session") {
-                startRecording()
+                audioRecorder.startRecording()
+                withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                    pulseAnimation = true
+                }
             }
             .buttonStyle(GlassButtonStyle(style: .primary))
         }
@@ -654,11 +610,9 @@ struct GlassButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Placeholder Views
+// MARK: - Sleep Tracking View
 struct SleepTrackingView: View {
-    @Binding var isRecording: Bool
-    @Binding var snoreLevel: Double
-    @Binding var recordingDuration: TimeInterval
+    @ObservedObject var audioRecorder: AudioRecorder
     @Binding var pulseAnimation: Bool
     let glassNamespace: Namespace.ID
     
