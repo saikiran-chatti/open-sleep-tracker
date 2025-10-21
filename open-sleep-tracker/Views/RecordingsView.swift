@@ -2,261 +2,487 @@
 //  RecordingsView.swift
 //  open-sleep-tracker
 //
-//  Created by Jay Chatti on 10/16/25.
+//  Redesigned by Codex on 10/21/25.
 //
 
 import SwiftUI
 
 struct RecordingsView: View {
     @ObservedObject var audioRecorder: AudioRecorder
-    let glassNamespace: Namespace.ID
+    @State private var searchText = ""
     @State private var selectedRecording: AudioRecording?
-    @State private var showingDeleteAlert = false
-    @State private var recordingToDelete: AudioRecording?
+    @State private var recordingPendingDeletion: AudioRecording?
+    @State private var showDeleteConfirmation = false
+    
+    private var recordings: [AudioRecording] {
+        if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+            return audioRecorder.recordings
+        }
+        
+        return audioRecorder.recordings.filter { recording in
+            let needle = searchText.lowercased()
+            return recording.fileName.lowercased().contains(needle) ||
+            recording.formattedDate.lowercased().contains(needle)
+        }
+    }
+    
+    private var summary: RecordingSummary {
+        RecordingSummary(recordings: audioRecorder.recordings)
+    }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
-                // Background
-                backgroundGradient
-                    .ignoresSafeArea()
+                AppBackgroundView()
                 
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        // Header
-                        headerSection
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: 24) {
+                        RecordingsHeader(summary: summary)
                         
-                        // Current Recording (if recording)
                         if audioRecorder.isRecording {
-                            currentRecordingCard
+                            LiveRecordingBanner(
+                                duration: audioRecorder.recordingDuration,
+                                level: audioRecorder.audioLevel,
+                                stopAction: audioRecorder.stopRecording
+                            )
                         }
                         
-                        // Recordings List
-                        if audioRecorder.recordings.isEmpty && !audioRecorder.isRecording {
-                            emptyStateView
+                        if recordings.isEmpty {
+                            EmptyRecordingsState(startAction: startRecording)
                         } else {
-                            recordingsList
+                            VStack(alignment: .leading, spacing: 16) {
+                                SectionHeader(
+                                    title: "Saved Sessions",
+                                    subtitle: "Powered by Audio Classification Agent"
+                                )
+                                
+                                LazyVStack(spacing: 16) {
+                                    ForEach(recordings) { recording in
+                                        RecordingCard(
+                                            recording: recording,
+                                            playAction: { audioRecorder.playRecording(recording) },
+                                            showAction: { selectedRecording = recording },
+                                            deleteAction: {
+                                                recordingPendingDeletion = recording
+                                                showDeleteConfirmation = true
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 100)
+                    .padding(.vertical, 24)
                 }
             }
-            .navigationBarHidden(true)
+            .navigationTitle("Sound Library")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        startRecording()
+                    } label: {
+                        Label("Quick Record", systemImage: "plus.circle")
+                    }
+                }
+            }
         }
-        .alert("Delete Recording", isPresented: $showingDeleteAlert) {
-            Button("Cancel", role: .cancel) { }
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .automatic),
+            prompt: "Search recordings"
+        )
+        .sheet(item: $selectedRecording) { recording in
+            RecordingDetailView(recording: recording)
+                .presentationDetents([.medium, .large])
+        }
+        .confirmationDialog(
+            "Delete recording?",
+            isPresented: $showDeleteConfirmation,
+            presenting: recordingPendingDeletion
+        ) { recording in
             Button("Delete", role: .destructive) {
-                if let recording = recordingToDelete {
-                    audioRecorder.deleteRecording(recording)
-                }
+                audioRecorder.deleteRecording(recording)
             }
-        } message: {
-            Text("Are you sure you want to delete this recording? This action cannot be undone.")
+        } message: { recording in
+            Text("Remove \(recording.fileName)? This action cannot be undone.")
         }
     }
     
-    private var backgroundGradient: some View {
-        ZStack {
-            // Base gradient
-            LinearGradient(
-                colors: [
-                    Color(red: 0.05, green: 0.05, blue: 0.15),
-                    Color(red: 0.1, green: 0.05, blue: 0.2),
-                    Color(red: 0.15, green: 0.1, blue: 0.25)
-                ],
+    private func startRecording() {
+        if !audioRecorder.isRecording {
+            audioRecorder.startRecording()
+        }
+    }
+}
+
+// MARK: - Header & Summary
+
+private struct RecordingsHeader: View {
+    let summary: RecordingSummary
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            SectionHeader(
+                title: "Captured Nights",
+                subtitle: "Snore samples for personalization & model retraining"
+            )
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 2), spacing: 16) {
+                SummaryTile(
+                    title: "Sessions",
+                    value: "\(summary.count)",
+                    caption: "Across \(summary.uniqueNights) nights",
+                    icon: "dot.radiowaves.left.and.right",
+                    tint: .accentBlue
+                )
+                
+                SummaryTile(
+                    title: "Listening Time",
+                    value: summary.totalDuration,
+                    caption: "Stored locally & encrypted",
+                    icon: "clock.arrow.circlepath",
+                    tint: .accentPurple
+                )
+                
+                SummaryTile(
+                    title: "Library Size",
+                    value: summary.totalSize,
+                    caption: "Auto pruned by Data Sync Agent",
+                    icon: "externaldrive.fill.badge.timelapse",
+                    tint: .accentTeal
+                )
+                
+                SummaryTile(
+                    title: "Avg. Snore Intensity",
+                    value: summary.averageIntensity,
+                    caption: "High = review with AI coach",
+                    icon: "waveform",
+                    tint: .accentOrange
+                )
+            }
+        }
+    }
+}
+
+private struct SummaryTile: View {
+    let title: String
+    let value: String
+    let caption: String
+    let icon: String
+    let tint: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: icon)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+                .labelStyle(.iconLeading)
+            
+            Text(value)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            
+            Text(caption)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.6))
+                .lineLimit(2)
+        }
+        .padding(18)
+        .glassCard(
+            cornerRadius: 22,
+            tint: LinearGradient(
+                colors: [tint.opacity(0.18), .clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            shadowColor: tint.opacity(0.2)
+        )
+    }
+}
+
+private struct LiveRecordingBanner: View {
+    let duration: TimeInterval
+    let level: Float
+    let stopAction: () -> Void
+    @State private var pulse = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Label("Recording in progress", systemImage: "dot.radiowaves.left.and.right")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                
+                Spacer()
+                
+                Button("Stop") {
+                    stopAction()
+                }
+                .font(.caption)
+                .foregroundStyle(.accentOrange)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.white.opacity(0.08))
+                .clipShape(Capsule())
+            }
+            
+            Text("Audio Classification Agent is capturing clean samples and tagging snore intensity.")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+            
+            HStack(alignment: .center, spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(.accentOrange.opacity(0.25))
+                        .frame(width: 56, height: 56)
+                        .scaleEffect(pulse ? 1.1 : 0.85)
+                        .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: pulse)
+                    
+                    Circle()
+                        .fill(.accentOrange)
+                        .frame(width: 18, height: 18)
+                }
+                .onAppear { pulse = true }
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Elapsed \(duration.formattedDurationDescription)")
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                    
+                    ProgressView(value: Double(level))
+                        .tint(.accentOrange)
+                        .background(Capsule().fill(.white.opacity(0.1)))
+                        .clipShape(Capsule())
+                }
+            }
+        }
+        .padding(22)
+        .glassCard(
+            cornerRadius: 26,
+            tint: LinearGradient(
+                colors: [.accentOrange.opacity(0.2), .clear],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-        }
-    }
-    
-    private var headerSection: some View {
-        VStack(spacing: 12) {
-            Text("Audio Recordings")
-                .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.white, .blue.opacity(0.8)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-            
-            Text("Manage your sleep recordings")
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.7))
-        }
-        .padding(.vertical, 20)
-        .padding(.horizontal, 30)
-        .background(
-            GlassCard(
-                radius: 24,
-                strokeWidth: 1,
-                shadowRadius: 20
-            )
         )
     }
+}
+
+private struct RecordingCard: View {
+    let recording: AudioRecording
+    let playAction: () -> Void
+    let showAction: () -> Void
+    let deleteAction: () -> Void
     
-    private var currentRecordingCard: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "mic.fill")
-                    .font(.title2)
-                    .foregroundColor(.red)
-                
-                Text("Currently Recording")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                
-                Spacer()
-            }
-            
-            VStack(spacing: 12) {
-                Text(audioRecorder.currentRecording?.formattedDuration ?? "00:00")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.white, .red.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                
-                // Audio level indicator
-                HStack(spacing: 4) {
-                    ForEach(0..<10, id: \.self) { index in
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(index < Int(audioRecorder.audioLevel * 10) ? .red : .white.opacity(0.2))
-                            .frame(width: 4, height: CGFloat(8 + index * 2))
-                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: audioRecorder.audioLevel)
-                    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(recordingTitle)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    
+                    Text(recording.formattedDate)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.6))
                 }
                 
-                Text("Audio Level: \(Int(audioRecorder.audioLevel * 100))%")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
+                Spacer()
+                
+                Menu {
+                    Button("Review details", action: showAction)
+                    Button("Delete", role: .destructive, action: deleteAction)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.title3)
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            
+            HStack(spacing: 16) {
+                MetricPill(
+                    title: "Duration",
+                    value: recording.formattedDuration,
+                    icon: "clock.badge.checkmark",
+                    tint: .accentBlue
+                )
+                
+                MetricPill(
+                    title: "Size",
+                    value: recording.fileSize,
+                    icon: "externaldrive.fill",
+                    tint: .accentTeal
+                )
+                
+                MetricPill(
+                    title: "Intensity",
+                    value: "\(Int(recording.audioLevel * 100))%",
+                    icon: "waveform.path.ecg",
+                    tint: recording.audioLevel > 0.6 ? .accentOrange : .accentGreen
+                )
+            }
+            
+            HStack(spacing: 12) {
+                Button {
+                    playAction()
+                } label: {
+                    Label("Play snippet", systemImage: "play.fill")
+                        .font(.subheadline)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.accentBlue.opacity(0.8))
+                
+                Button("Open analysis", action: showAction)
+                    .buttonStyle(.bordered)
+                    .tint(.accentPurple)
+            }
+            
+            if recording.audioLevel > 0.7 {
+                BadgeView(text: "High snore intensity", icon: "exclamationmark.triangle.fill", color: .accentOrange)
+            } else if recording.audioLevel < 0.3 {
+                BadgeView(text: "Quiet sample", icon: "leaf", color: .accentGreen)
             }
         }
-        .padding(20)
-        .background(
-            GlassCard(
-                radius: 16,
-                strokeWidth: 1,
-                shadowRadius: 15
-            )
+        .padding(22)
+        .glassCard(
+            cornerRadius: 24,
+            tint: LinearGradient(
+                colors: [.white.opacity(0.04), .accentBlue.opacity(0.12)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            shadowColor: .black.opacity(0.2)
         )
     }
     
-    private var emptyStateView: some View {
-        VStack(spacing: 20) {
+    private var recordingTitle: String {
+        recording.fileName.replacingOccurrences(of: ".m4a", with: "")
+    }
+}
+
+private struct EmptyRecordingsState: View {
+    let startAction: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 16) {
             Image(systemName: "waveform.slash")
-                .font(.system(size: 60))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.blue.opacity(0.8), .purple.opacity(0.6)],
+                .font(.system(size: 54))
+                .foregroundStyle(.accentBlue)
+            
+            Text("No recordings yet")
+                .font(.headline)
+                .foregroundStyle(.white)
+            
+            Text("Start a sleep session and Audio Classification Agent will capture the first sample.")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.65))
+                .multilineTextAlignment(.center)
+            
+            Button(action: startAction) {
+                Label("Start recording", systemImage: "record.circle")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.accentGreen.opacity(0.9))
+        }
+        .padding(36)
+        .glassCard(
+            cornerRadius: 26,
+            tint: LinearGradient(
+                colors: [.accentBlue.opacity(0.18), .clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+    }
+}
+
+// MARK: - Detail Sheet
+
+private struct RecordingDetailView: View {
+    let recording: AudioRecording
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                SectionHeader(
+                    title: "Recording Overview",
+                    subtitle: "Captured \(recording.formattedDate)"
+                )
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("File name: \(recording.fileName)", systemImage: "doc")
+                    Label("Duration: \(recording.formattedDuration)", systemImage: "clock")
+                    Label("File size: \(recording.fileSize)", systemImage: "externaldrive")
+                    
+                    if let end = recording.endTime {
+                        Label("Completed: \(formatted(date: end))", systemImage: "checkmark.circle")
+                    }
+                }
+                .padding(20)
+                .glassCard(cornerRadius: 24)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Agent Notes", subtitle: "Auto-generated tags")
+                    
+                    BadgeView(text: "Audio Classification Agent", icon: "waveform", color: .accentBlue)
+                    BadgeView(text: "Sleep Pattern Analysis Agent", icon: "chart.xyaxis.line", color: .accentPurple)
+                    BadgeView(text: "Health Integration Agent", icon: "heart", color: .accentTeal)
+                }
+                .padding(20)
+                .glassCard(
+                    cornerRadius: 24,
+                    tint: LinearGradient(
+                        colors: [.accentPurple.opacity(0.18), .clear],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
-            
-            Text("No Recordings Yet")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-            
-            Text("Start a sleep session to begin recording your sleep patterns and snoring")
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.7))
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
+            }
+            .padding(20)
         }
-        .padding(40)
-        .background(
-            GlassCard(
-                radius: 20,
-                strokeWidth: 1,
-                shadowRadius: 15
-            )
-        )
+        .background(AppBackgroundView())
+        .presentationBackground(.ultraThinMaterial)
     }
     
-    private var recordingsList: some View {
-        LazyVStack(spacing: 12) {
-            ForEach(audioRecorder.recordings) { recording in
-                RecordingCard(
-                    recording: recording,
-                    onPlay: { audioRecorder.playRecording(recording) },
-                    onDelete: {
-                        recordingToDelete = recording
-                        showingDeleteAlert = true
-                    }
-                )
-            }
-        }
+    private func formatted(date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
-// MARK: - Recording Card
-struct RecordingCard: View {
-    let recording: AudioRecording
-    let onPlay: () -> Void
-    let onDelete: () -> Void
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            // Play button
-            Button(action: onPlay) {
-                Image(systemName: "play.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(.blue)
-            }
-            
-            // Recording info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(recording.formattedDate)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                HStack {
-                    Text(recording.formattedDuration)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
-                    
-                    Text("•")
-                        .foregroundColor(.white.opacity(0.5))
-                    
-                    Text(recording.fileSize)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
-                }
-            }
-            
-            Spacer()
-            
-            // Delete button
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.title3)
-                    .foregroundColor(.red.opacity(0.8))
-            }
-        }
-        .padding(16)
-        .background(
-            GlassCard(
-                radius: 12,
-                strokeWidth: 1,
-                shadowRadius: 8
-            )
-        )
-    }
-}
+// MARK: - Summary Model
 
-#Preview {
-    RecordingsView(
-        audioRecorder: AudioRecorder(),
-        glassNamespace: Namespace().wrappedValue
-    )
+private struct RecordingSummary {
+    let count: Int
+    let uniqueNights: Int
+    let totalDuration: String
+    let totalSize: String
+    let averageIntensity: String
+    
+    init(recordings: [AudioRecording]) {
+        count = recordings.count
+        
+        let nights = Set(recordings.map { Calendar.current.startOfDay(for: $0.startTime) })
+        uniqueNights = nights.count
+        
+        let totalSeconds = recordings.reduce(0.0) { $0 + $1.duration }
+        totalDuration = totalSeconds.formattedDurationDescription
+        
+        let totalBytes = recordings.reduce(Int64(0)) { partial, recording in
+            let attributes = try? FileManager.default.attributesOfItem(atPath: recording.fileURL.path)
+            let size = attributes?[.size] as? Int64 ?? 0
+            return partial + size
+        }
+        totalSize = ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)
+        
+        if recordings.isEmpty {
+            averageIntensity = "—"
+        } else {
+            let average = recordings.reduce(0.0) { $0 + Double($1.audioLevel) } / Double(recordings.count)
+            averageIntensity = "\(Int(average * 100))%"
+        }
+    }
 }
