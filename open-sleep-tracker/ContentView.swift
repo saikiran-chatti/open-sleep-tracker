@@ -13,7 +13,7 @@ struct ContentView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            DashboardScreen(audioRecorder: audioRecorder)
+            DashboardScreen(selectedTab: $selectedTab, audioRecorder: audioRecorder)
                 .tabItem {
                     Label("Home", systemImage: "house.fill")
                 }
@@ -54,8 +54,42 @@ struct ContentView: View {
 // MARK: - Dashboard
 
 struct DashboardScreen: View {
+    @Binding var selectedTab: ContentView.Tab
     @ObservedObject var audioRecorder: AudioRecorder
     @State private var dashboardData = DashboardData.sample
+    @State private var selectedSection: DashboardSection = .overview
+
+    enum DashboardSection: String, CaseIterable, Identifiable {
+        case overview
+        case insights
+        case agents
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .overview: return "Overview"
+            case .insights: return "Insights"
+            case .agents: return "Agents"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .overview: return "rectangle.grid.2x2"
+            case .insights: return "chart.bar.doc.horizontal"
+            case .agents: return "person.3.fill"
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .overview: return "Tonight at a glance"
+            case .insights: return "Trends & guidance"
+            case .agents: return "Agent network health"
+            }
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -65,16 +99,19 @@ struct DashboardScreen: View {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 24) {
                         DashboardHeroCard(summary: dashboardData.summary)
-                        
-                        HighlightGrid(highlights: dashboardData.highlights)
-                        
-                        AgentStatusSection(agents: dashboardData.agents)
-                        
-                        LiveSessionControl(audioRecorder: audioRecorder)
-                        
-                        InsightsSection(insights: dashboardData.insights)
-                        
-                        TimelineSection(events: dashboardData.timeline)
+
+                        DashboardQuickNavigation(
+                            destinations: quickDestinations,
+                            onSelect: { tab in
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedTab = tab
+                                }
+                            }
+                        )
+
+                        DashboardSectionPicker(selection: $selectedSection)
+
+                        sectionContent
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 24)
@@ -93,11 +130,65 @@ struct DashboardScreen: View {
             }
         }
     }
+
+    private var quickDestinations: [DashboardQuickDestination] {
+        [
+            .init(
+                title: "Sleep Sessions",
+                subtitle: "Run overnight monitoring",
+                icon: "moon.zzz.fill",
+                tab: .sessions
+            ),
+            .init(
+                title: "Recordings",
+                subtitle: "Review captured audio",
+                icon: "waveform",
+                tab: .recordings
+            ),
+            .init(
+                title: "Insights",
+                subtitle: "Deep-dive analytics",
+                icon: "chart.bar.xaxis",
+                tab: .analytics
+            ),
+            .init(
+                title: "Settings",
+                subtitle: "Agent preferences & health",
+                icon: "slider.horizontal.3",
+                tab: .settings
+            )
+        ]
+    }
+
+    @ViewBuilder
+    private var sectionContent: some View {
+        switch selectedSection {
+        case .overview:
+            VStack(spacing: 20) {
+                HighlightGrid(highlights: dashboardData.highlights)
+                LiveSessionControl(audioRecorder: audioRecorder)
+            }
+        case .insights:
+            VStack(spacing: 20) {
+                InsightsSection(insights: dashboardData.insights)
+                TimelineSection(events: dashboardData.timeline)
+            }
+        case .agents:
+            VStack(spacing: 20) {
+                AgentStatusSection(agents: dashboardData.agents)
+                AgentSnapshotCard(agents: dashboardData.agents) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        selectedTab = .settings
+                    }
+                }
+            }
+        }
+    }
 }
 
 struct DashboardHeroCard: View {
     let summary: DashboardData.SleepSummary
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(alignment: .top) {
@@ -156,6 +247,185 @@ struct DashboardHeroCard: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+        )
+    }
+}
+
+struct DashboardQuickDestination: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let icon: String
+    let tab: ContentView.Tab
+}
+
+struct DashboardQuickNavigation: View {
+    let destinations: [DashboardQuickDestination]
+    let onSelect: (ContentView.Tab) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader(
+                title: "Quick Navigation",
+                subtitle: "Open focused screens for deeper control"
+            )
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                ForEach(destinations) { destination in
+                    Button {
+                        onSelect(destination.tab)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Image(systemName: destination.icon)
+                                .font(.title3)
+                                .foregroundStyle(.accentBlue)
+                                .padding(12)
+                                .background(.white.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(destination.title)
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+
+                                Text(destination.subtitle)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.65))
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(20)
+                        .glassCard(
+                            cornerRadius: 22,
+                            tint: LinearGradient(
+                                colors: [Color.white.opacity(0.05), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            shadowColor: .black.opacity(0.25)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(destination.title)
+                    .accessibilityHint(destination.subtitle)
+                }
+            }
+        }
+    }
+}
+
+struct DashboardSectionPicker: View {
+    @Binding var selection: DashboardScreen.DashboardSection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Focus Area")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            Picker("Focus Area", selection: $selection) {
+                ForEach(DashboardScreen.DashboardSection.allCases) { section in
+                    Text(section.title)
+                        .tag(section)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Text(selection.subtitle)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.65))
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(.ultraThinMaterial.opacity(0.8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(.white.opacity(0.12), lineWidth: 1)
+                )
+        )
+    }
+}
+
+struct AgentSnapshotCard: View {
+    let agents: [DashboardData.Agent]
+    let onManageAgents: () -> Void
+
+    private var activeCount: Int {
+        agents.filter { $0.state == .running }.count
+    }
+
+    private var syncingCount: Int {
+        agents.filter { $0.state == .syncing }.count
+    }
+
+    private var attentionCount: Int {
+        agents.filter { $0.state == .attention }.count
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Agent Coverage Overview")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Spacer()
+            }
+
+            HStack(spacing: 14) {
+                AgentSnapshotMetric(title: "Active", value: "\(activeCount)", icon: "sparkles", tint: .accentGreen)
+                AgentSnapshotMetric(title: "Syncing", value: "\(syncingCount)", icon: "arrow.triangle.2.circlepath", tint: .accentBlue)
+                AgentSnapshotMetric(title: "Attention", value: "\(attentionCount)", icon: "exclamationmark.triangle.fill", tint: .accentOrange)
+            }
+
+            Text("Manage agent behavior, notifications, and privacy controls in Settings when you need deeper adjustments.")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+
+            Button("Manage Agents in Settings") {
+                onManageAgents()
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.accentBlue.opacity(0.8))
+        }
+        .padding(20)
+        .glassCard(
+            cornerRadius: 24,
+            tint: LinearGradient(
+                colors: [Color.white.opacity(0.05), .clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            shadowColor: .black.opacity(0.2)
+        )
+    }
+}
+
+struct AgentSnapshotMetric: View {
+    let title: String
+    let value: String
+    let icon: String
+    let tint: Color
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundStyle(tint)
+
+            Text(value)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.white.opacity(0.08))
         )
     }
 }
@@ -1116,7 +1386,7 @@ struct TrendCards: View {
             SectionHeader(title: "Key Trends", subtitle: "Correlations surfaced by multi-agent analysis")
             
             VStack(spacing: 16) {
-                ForEach(trends) { trend in
+                ForEach(trends, id: \.id) { trend in
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Label(trend.title, systemImage: trend.icon)
@@ -1139,7 +1409,7 @@ struct TrendCards: View {
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.55))
                             Spacer()
-                            Label("\(trend.confidence%) confidence", systemImage: "checkmark.seal.fill")
+                            Label("\(trend.confidence)% confidence", systemImage: "checkmark.seal.fill")
                                 .font(.caption2)
                                 .foregroundStyle(.accentTeal)
                         }
@@ -1344,9 +1614,9 @@ struct AppBackgroundView: View {
     var body: some View {
         LinearGradient(
             colors: [
-                Color(red: 0.04, green: 0.05, blue: 0.14),
-                Color(red: 0.06, green: 0.04, blue: 0.18),
-                Color(red: 0.03, green: 0.08, blue: 0.2)
+                Color(red: 0.12, green: 0.14, blue: 0.24),
+                Color(red: 0.09, green: 0.11, blue: 0.23),
+                Color(red: 0.06, green: 0.08, blue: 0.18)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -1354,8 +1624,8 @@ struct AppBackgroundView: View {
         .overlay(
             RadialGradient(
                 colors: [
-                    Color.accentBlue.opacity(0.35),
-                    Color.accentPurple.opacity(0.2),
+                    Color.accentBlue.opacity(0.28),
+                    Color.accentPurple.opacity(0.18),
                     .clear
                 ],
                 center: animate ? .bottomTrailing : .topLeading,
@@ -1371,9 +1641,9 @@ struct AppBackgroundView: View {
         .overlay(
             AngularGradient(
                 colors: [
-                    .white.opacity(0.05),
+                    .white.opacity(0.04),
                     .clear,
-                    .accentPurple.opacity(0.08)
+                    .accentPurple.opacity(0.06)
                 ],
                 center: animate ? .center : .topLeading,
                 angle: .degrees(animate ? 90 : -120)
@@ -1927,6 +2197,14 @@ extension Color {
     static let accentGreen = Color(red: 0.3, green: 0.84, blue: 0.6)
     static let accentOrange = Color(red: 0.98, green: 0.54, blue: 0.2)
     static let accentTeal = Color(red: 0.32, green: 0.82, blue: 0.86)
+}
+
+extension ShapeStyle where Self == Color {
+    static var accentBlue: Color { Color.accentBlue }
+    static var accentPurple: Color { Color.accentPurple }
+    static var accentGreen: Color { Color.accentGreen }
+    static var accentOrange: Color { Color.accentOrange }
+    static var accentTeal: Color { Color.accentTeal }
 }
 
 #Preview {

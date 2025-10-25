@@ -212,7 +212,7 @@ private struct LiveRecordingBanner: View {
             HStack {
                 Label("Recording in progress", systemImage: "dot.radiowaves.left.and.right")
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.accentOrange)
                 
                 Spacer()
                 
@@ -220,7 +220,7 @@ private struct LiveRecordingBanner: View {
                     stopAction()
                 }
                 .font(.caption)
-                .foregroundStyle(.accentOrange)
+                .foregroundStyle(Color.accentOrange)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(.white.opacity(0.08))
@@ -234,13 +234,13 @@ private struct LiveRecordingBanner: View {
             HStack(alignment: .center, spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(.accentOrange.opacity(0.25))
+                        .fill(Color.accentOrange.opacity(0.25))
                         .frame(width: 56, height: 56)
                         .scaleEffect(pulse ? 1.1 : 0.85)
                         .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: pulse)
                     
                     Circle()
-                        .fill(.accentOrange)
+                        .fill(Color.accentOrange)
                         .frame(width: 18, height: 18)
                 }
                 .onAppear { pulse = true }
@@ -251,7 +251,7 @@ private struct LiveRecordingBanner: View {
                         .foregroundStyle(.white)
                     
                     ProgressView(value: Double(level))
-                        .tint(.accentOrange)
+                        .tint(Color.accentOrange)
                         .background(Capsule().fill(.white.opacity(0.1)))
                         .clipShape(Capsule())
                 }
@@ -261,7 +261,7 @@ private struct LiveRecordingBanner: View {
         .glassCard(
             cornerRadius: 26,
             tint: LinearGradient(
-                colors: [.accentOrange.opacity(0.2), .clear],
+                colors: [Color.accentOrange.opacity(0.2), .clear],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -305,21 +305,21 @@ private struct RecordingCard: View {
                     title: "Duration",
                     value: recording.formattedDuration,
                     icon: "clock.badge.checkmark",
-                    tint: .accentBlue
+                    tint: Color.accentBlue
                 )
                 
                 MetricPill(
                     title: "Size",
                     value: recording.fileSize,
                     icon: "externaldrive.fill",
-                    tint: .accentTeal
+                    tint: Color.accentTeal
                 )
                 
                 MetricPill(
                     title: "Intensity",
                     value: "\(Int(recording.audioLevel * 100))%",
                     icon: "waveform.path.ecg",
-                    tint: recording.audioLevel > 0.6 ? .accentOrange : .accentGreen
+                    tint: recording.audioLevel > 0.6 ? Color.accentOrange : Color.accentGreen
                 )
             }
             
@@ -331,24 +331,24 @@ private struct RecordingCard: View {
                         .font(.subheadline)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.accentBlue.opacity(0.8))
+                .tint(Color.accentBlue.opacity(0.8))
                 
                 Button("Open analysis", action: showAction)
                     .buttonStyle(.bordered)
-                    .tint(.accentPurple)
+                    .tint(Color.accentPurple)
             }
             
             if recording.audioLevel > 0.7 {
-                BadgeView(text: "High snore intensity", icon: "exclamationmark.triangle.fill", color: .accentOrange)
+                BadgeView(text: "High snore intensity", icon: "exclamationmark.triangle.fill", color: Color.accentOrange)
             } else if recording.audioLevel < 0.3 {
-                BadgeView(text: "Quiet sample", icon: "leaf", color: .accentGreen)
+                BadgeView(text: "Quiet sample", icon: "leaf", color: Color.accentGreen)
             }
         }
         .padding(22)
         .glassCard(
             cornerRadius: 24,
             tint: LinearGradient(
-                colors: [.white.opacity(0.04), .accentBlue.opacity(0.12)],
+                colors: [.white.opacity(0.04), Color.accentBlue.opacity(0.12)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
@@ -368,7 +368,7 @@ private struct EmptyRecordingsState: View {
         VStack(spacing: 16) {
             Image(systemName: "waveform.slash")
                 .font(.system(size: 54))
-                .foregroundStyle(.accentBlue)
+                .foregroundStyle(Color.accentBlue)
             
             Text("No recordings yet")
                 .font(.headline)
@@ -383,13 +383,13 @@ private struct EmptyRecordingsState: View {
                 Label("Start recording", systemImage: "record.circle")
             }
             .buttonStyle(.borderedProminent)
-            .tint(.accentGreen.opacity(0.9))
+            .tint(Color.accentGreen.opacity(0.9))
         }
         .padding(36)
         .glassCard(
             cornerRadius: 26,
             tint: LinearGradient(
-                colors: [.accentBlue.opacity(0.18), .clear],
+                colors: [Color.accentBlue.opacity(0.18), .clear],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -425,15 +425,15 @@ private struct RecordingDetailView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     SectionHeader(title: "Agent Notes", subtitle: "Auto-generated tags")
                     
-                    BadgeView(text: "Audio Classification Agent", icon: "waveform", color: .accentBlue)
-                    BadgeView(text: "Sleep Pattern Analysis Agent", icon: "chart.xyaxis.line", color: .accentPurple)
-                    BadgeView(text: "Health Integration Agent", icon: "heart", color: .accentTeal)
+                    BadgeView(text: "Audio Classification Agent", icon: "waveform", color: Color.accentBlue)
+                    BadgeView(text: "Sleep Pattern Analysis Agent", icon: "chart.xyaxis.line", color: Color.accentPurple)
+                    BadgeView(text: "Health Integration Agent", icon: "heart", color: Color.accentTeal)
                 }
                 .padding(20)
                 .glassCard(
                     cornerRadius: 24,
                     tint: LinearGradient(
-                        colors: [.accentPurple.opacity(0.18), .clear],
+                        colors: [Color.accentPurple.opacity(0.18), .clear],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )

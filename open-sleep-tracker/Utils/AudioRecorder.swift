@@ -31,7 +31,7 @@ class AudioRecorder: NSObject, ObservableObject {
     private func setupAudioSession() {
         do {
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.record, mode: .default)
+            try audioSession.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP, .allowBluetoothA2DP])
             try audioSession.setActive(true)
         } catch {
             print("Failed to setup audio session: \(error)")
@@ -41,6 +41,37 @@ class AudioRecorder: NSObject, ObservableObject {
     func startRecording() {
         guard !isRecording else { return }
         
+        // Check microphone permission first
+        checkMicrophonePermission { [weak self] granted in
+            guard granted else {
+                print("Microphone permission denied")
+                return
+            }
+            
+            DispatchQueue.main.async {
+                self?.performRecording()
+            }
+        }
+    }
+    
+    private func checkMicrophonePermission(completion: @escaping (Bool) -> Void) {
+        let audioSession = AVAudioSession.sharedInstance()
+        
+        switch audioSession.recordPermission {
+        case .granted:
+            completion(true)
+        case .denied:
+            completion(false)
+        case .undetermined:
+            audioSession.requestRecordPermission { granted in
+                completion(granted)
+            }
+        @unknown default:
+            completion(false)
+        }
+    }
+    
+    private func performRecording() {
         do {
             // Create audio file
             let fileName = "recording_\(Date().timeIntervalSince1970).m4a"
@@ -59,7 +90,7 @@ class AudioRecorder: NSObject, ObservableObject {
             let inputNode = audioEngine.inputNode
             let recordingFormat = inputNode.outputFormat(forBus: 0)
             
-            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] (buffer: AVAudioPCMBuffer, _: AVAudioTime) in
                 self?.processAudioBuffer(buffer)
             }
             
@@ -121,6 +152,11 @@ class AudioRecorder: NSObject, ObservableObject {
             try audioFile.write(from: buffer)
         } catch {
             print("Failed to write audio buffer: \(error)")
+            // Stop recording if we can't write to file
+            DispatchQueue.main.async {
+                self.stopRecording()
+            }
+            return
         }
         
         // Calculate audio level
@@ -130,7 +166,7 @@ class AudioRecorder: NSObject, ObservableObject {
             
             let rms = sqrt(channelDataValueArray.map { $0 * $0 }.reduce(0, +) / Float(buffer.frameLength))
             let avgPower = 20 * log10(rms)
-            let normalizedPower = max(0.0, (avgPower + 60) / 60) // Normalize to 0-1 range
+            let normalizedPower = max(0.0, min(1.0, (avgPower + 60) / 60)) // Normalize to 0-1 range
             
             DispatchQueue.main.async {
                 self.audioLevel = normalizedPower
@@ -167,6 +203,39 @@ class AudioRecorder: NSObject, ObservableObject {
         print("Playing recording: \(recording.fileName)")
     }
     
+    func isAudioRecordingWorking() -> Bool {
+        let audioSession = AVAudioSession.sharedInstance()
+        return audioSession.recordPermission == .granted && audioEngine.isRunning
+    }
+    
+    func getRecordingStatus() -> String {
+        if !isRecording {
+            return "Not recording"
+        }
+        
+        if audioEngine.isRunning {
+            return "Recording active - \(String(format: "%.1f", recordingDuration))s"
+        } else {
+            return "Recording stopped"
+        }
+    }
+    
+    func testAudioRecording() {
+        print("Testing audio recording...")
+        print("Microphone permission: \(AVAudioSession.sharedInstance().recordPermission.rawValue)")
+        print("Audio engine running: \(audioEngine.isRunning)")
+        print("Current recording: \(isRecording)")
+        print("Recordings count: \(recordings.count)")
+        
+        // Test a short recording
+        startRecording()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.stopRecording()
+            print("Test recording completed. New recordings count: \(self.recordings.count)")
+        }
+    }
+    
     private func loadExistingRecordings() {
         do {
             let fileURLs = try FileManager.default.contentsOfDirectory(
@@ -180,7 +249,6 @@ class AudioRecorder: NSObject, ObservableObject {
                 .map { url in
                     let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
                     let creationDate = attributes?[.creationDate] as? Date ?? Date()
-                    let fileSize = attributes?[.size] as? Int64 ?? 0
                     
                     return AudioRecording(
                         id: UUID(),
