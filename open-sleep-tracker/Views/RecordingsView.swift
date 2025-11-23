@@ -172,23 +172,27 @@ private struct SummaryTile: View {
     let caption: String
     let icon: String
     let tint: Color
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label(title, systemImage: icon)
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.7))
                 .labelStyle(.iconLeading)
-            
+
+            Spacer(minLength: 0)
+
             Text(value)
                 .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
-            
+
             Text(caption)
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.6))
                 .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
         .padding(18)
         .glassCard(
             cornerRadius: 22,

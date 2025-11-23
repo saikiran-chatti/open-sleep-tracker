@@ -241,6 +241,8 @@ struct DashboardQuickNavigation: View {
                                 .background(.white.opacity(0.12))
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
 
+                            Spacer(minLength: 0)
+
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(destination.title)
                                     .font(.headline)
@@ -249,9 +251,11 @@ struct DashboardQuickNavigation: View {
                                 Text(destination.subtitle)
                                     .font(.caption)
                                     .foregroundStyle(.white.opacity(0.65))
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
                         .padding(20)
                         .glassCard(
                             cornerRadius: 22,
