@@ -334,30 +334,38 @@ class AudioRecorder: NSObject, ObservableObject {
         do {
             // Setup audio session for playback
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+            try audioSession.setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
             try audioSession.setActive(true)
 
-            let audioData: Data
-
             if recording.isEncrypted {
-                // Decrypt the audio file
+                // Decrypt the audio file and write to temp for playback
                 let encryptedData = try Data(contentsOf: recording.fileURL)
-                audioData = try decryptData(encryptedData)
+                let audioData = try decryptData(encryptedData)
+
+                // Write decrypted data to temp file for playback
+                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("playback_temp.m4a")
+                try audioData.write(to: tempURL)
+
+                // Create player from temp file
+                audioPlayer = try AVAudioPlayer(contentsOf: tempURL)
             } else {
-                audioData = try Data(contentsOf: recording.fileURL)
+                audioPlayer = try AVAudioPlayer(contentsOf: recording.fileURL)
             }
 
-            // Create player from decrypted data
-            audioPlayer = try AVAudioPlayer(data: audioData)
             audioPlayer?.delegate = self
+            audioPlayer?.volume = 1.0
             audioPlayer?.prepareToPlay()
-            audioPlayer?.play()
+
+            let success = audioPlayer?.play() ?? false
+            print("Playback started: \(success), duration: \(audioPlayer?.duration ?? 0)")
 
             isPlaying = true
             currentlyPlayingId = recording.id
 
         } catch {
             print("Failed to play recording: \(error)")
+            isPlaying = false
+            currentlyPlayingId = nil
         }
     }
 
