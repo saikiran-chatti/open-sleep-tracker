@@ -60,7 +60,8 @@ struct RecordingsView: View {
                                     ForEach(recordings) { recording in
                                         RecordingCard(
                                             recording: recording,
-                                            playAction: { audioRecorder.playRecording(recording) },
+                                            isPlaying: audioRecorder.currentlyPlayingId == recording.id && audioRecorder.isPlaying,
+                                            playAction: { audioRecorder.togglePlayback(recording) },
                                             showAction: { selectedRecording = recording },
                                             deleteAction: {
                                                 recordingPendingDeletion = recording
@@ -271,10 +272,11 @@ private struct LiveRecordingBanner: View {
 
 private struct RecordingCard: View {
     let recording: AudioRecording
+    let isPlaying: Bool
     let playAction: () -> Void
     let showAction: () -> Void
     let deleteAction: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
@@ -282,14 +284,21 @@ private struct RecordingCard: View {
                     Text(recordingTitle)
                         .font(.headline)
                         .foregroundStyle(.white)
-                    
+
                     Text(recording.formattedDate)
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.6))
                 }
-                
+
                 Spacer()
-                
+
+                // Encryption badge
+                if recording.isEncrypted {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.caption)
+                        .foregroundStyle(.accentGreen)
+                }
+
                 Menu {
                     Button("Review details", action: showAction)
                     Button("Delete", role: .destructive, action: deleteAction)
@@ -299,7 +308,7 @@ private struct RecordingCard: View {
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }
-            
+
             HStack(spacing: 16) {
                 MetricPill(
                     title: "Duration",
@@ -307,14 +316,14 @@ private struct RecordingCard: View {
                     icon: "clock.badge.checkmark",
                     tint: Color.accentBlue
                 )
-                
+
                 MetricPill(
                     title: "Size",
                     value: recording.fileSize,
                     icon: "externaldrive.fill",
                     tint: Color.accentTeal
                 )
-                
+
                 MetricPill(
                     title: "Intensity",
                     value: "\(Int(recording.audioLevel * 100))%",
@@ -322,26 +331,32 @@ private struct RecordingCard: View {
                     tint: recording.audioLevel > 0.6 ? Color.accentOrange : Color.accentGreen
                 )
             }
-            
+
             HStack(spacing: 12) {
                 Button {
                     playAction()
                 } label: {
-                    Label("Play snippet", systemImage: "play.fill")
+                    Label(isPlaying ? "Stop" : "Play snippet", systemImage: isPlaying ? "stop.fill" : "play.fill")
                         .font(.subheadline)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.accentBlue.opacity(0.8))
-                
+                .tint(isPlaying ? Color.accentOrange.opacity(0.8) : Color.accentBlue.opacity(0.8))
+
                 Button("Open analysis", action: showAction)
                     .buttonStyle(.bordered)
                     .tint(Color.accentPurple)
             }
-            
-            if recording.audioLevel > 0.7 {
-                BadgeView(text: "High snore intensity", icon: "exclamationmark.triangle.fill", color: Color.accentOrange)
-            } else if recording.audioLevel < 0.3 {
-                BadgeView(text: "Quiet sample", icon: "leaf", color: Color.accentGreen)
+
+            HStack(spacing: 8) {
+                if recording.audioLevel > 0.7 {
+                    BadgeView(text: "High snore intensity", icon: "exclamationmark.triangle.fill", color: Color.accentOrange)
+                } else if recording.audioLevel < 0.3 {
+                    BadgeView(text: "Quiet sample", icon: "leaf", color: Color.accentGreen)
+                }
+
+                if recording.isEncrypted {
+                    BadgeView(text: "Encrypted", icon: "lock.fill", color: Color.accentTeal)
+                }
             }
         }
         .padding(22)
@@ -355,9 +370,9 @@ private struct RecordingCard: View {
             shadowColor: .black.opacity(0.2)
         )
     }
-    
+
     private var recordingTitle: String {
-        recording.fileName.replacingOccurrences(of: ".m4a", with: "")
+        recording.fileName.replacingOccurrences(of: ".m4a", with: "").replacingOccurrences(of: ".encrypted", with: "")
     }
 }
 
