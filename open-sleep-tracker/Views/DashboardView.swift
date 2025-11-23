@@ -145,21 +145,24 @@ struct DashboardScreen: View {
 // MARK: - Dashboard Components
 
 struct DashboardHeroCard: View {
+    @EnvironmentObject var themeManager: ThemeManager
     let summary: DashboardData.SleepSummary
 
     var body: some View {
+        let theme = themeManager.selectedTheme
+
         VStack(alignment: .leading, spacing: 20) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(summary.dateRangeLabel.uppercased())
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(theme.textSecondary)
                         .tracking(1.1)
 
                     Text(summary.headline)
                         .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(theme.textPrimary)
 
                     Label {
                         Text(summary.trendDescription)
@@ -179,7 +182,7 @@ struct DashboardHeroCard: View {
                 CircularScoreView(score: summary.sleepScore)
             }
 
-            Divider().background(.white.opacity(0.1))
+            Divider().background(theme.textTertiary)
 
             Grid(horizontalSpacing: 16, verticalSpacing: 16) {
                 GridRow {
@@ -194,18 +197,30 @@ struct DashboardHeroCard: View {
             }
         }
         .padding(24)
-        .glassCard(
-            cornerRadius: 28,
-            tint: LinearGradient(
-                colors: [
-                    .accentBlue.opacity(0.45),
-                    .accentPurple.opacity(0.3),
-                    .black.opacity(0.2)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+        .background(
+            RoundedRectangle(cornerRadius: 28)
+                .fill(theme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    theme.accentColor.opacity(0.3),
+                                    theme.secondaryAccent.opacity(0.2),
+                                    .clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28)
+                        .stroke(theme.accentColor.opacity(0.2), lineWidth: 1)
+                )
         )
+        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+        .animation(.easeInOut(duration: 0.3), value: theme)
     }
 }
 
@@ -218,10 +233,13 @@ struct DashboardQuickDestination: Identifiable {
 }
 
 struct DashboardQuickNavigation: View {
+    @EnvironmentObject var themeManager: ThemeManager
     let destinations: [DashboardQuickDestination]
     let onSelect: (ContentView.Tab) -> Void
 
     var body: some View {
+        let theme = themeManager.selectedTheme
+
         VStack(alignment: .leading, spacing: 16) {
             SectionHeader(
                 title: "Quick Navigation",
@@ -236,9 +254,9 @@ struct DashboardQuickNavigation: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Image(systemName: destination.icon)
                                 .font(.title3)
-                                .foregroundStyle(.accentBlue)
+                                .foregroundStyle(theme.accentColor)
                                 .padding(12)
-                                .background(.white.opacity(0.12))
+                                .background(theme.accentColor.opacity(0.15))
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
 
                             Spacer(minLength: 0)
@@ -246,26 +264,26 @@ struct DashboardQuickNavigation: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(destination.title)
                                     .font(.headline)
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(theme.textPrimary)
 
                                 Text(destination.subtitle)
                                     .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.65))
+                                    .foregroundStyle(theme.textSecondary)
                                     .lineLimit(2)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                         .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
                         .padding(20)
-                        .glassCard(
-                            cornerRadius: 22,
-                            tint: LinearGradient(
-                                colors: [Color.white.opacity(0.05), .clear],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            shadowColor: .black.opacity(0.25)
+                        .background(
+                            RoundedRectangle(cornerRadius: 22)
+                                .fill(theme.cardBackground)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 22)
+                                        .stroke(theme.accentColor.opacity(0.1), lineWidth: 1)
+                                )
                         )
+                        .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(destination.title)
@@ -273,17 +291,21 @@ struct DashboardQuickNavigation: View {
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: theme)
     }
 }
 
 struct DashboardSectionPicker: View {
+    @EnvironmentObject var themeManager: ThemeManager
     @Binding var selection: DashboardScreen.DashboardSection
 
     var body: some View {
+        let theme = themeManager.selectedTheme
+
         VStack(alignment: .leading, spacing: 12) {
             Text("Focus Area")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(theme.textPrimary)
 
             Picker("Focus Area", selection: $selection) {
                 ForEach(DashboardScreen.DashboardSection.allCases) { section in
@@ -295,17 +317,19 @@ struct DashboardSectionPicker: View {
 
             Text(selection.subtitle)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(theme.textSecondary)
         }
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 22)
-                .fill(.ultraThinMaterial.opacity(0.8))
+                .fill(theme.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 22)
-                        .stroke(.white.opacity(0.12), lineWidth: 1)
+                        .stroke(theme.accentColor.opacity(0.12), lineWidth: 1)
                 )
         )
+        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+        .animation(.easeInOut(duration: 0.3), value: theme)
     }
 }
 

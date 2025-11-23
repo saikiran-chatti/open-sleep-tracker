@@ -167,6 +167,7 @@ private struct RecordingsHeader: View {
 }
 
 private struct SummaryTile: View {
+    @EnvironmentObject var themeManager: ThemeManager
     let title: String
     let value: String
     let caption: String
@@ -174,35 +175,48 @@ private struct SummaryTile: View {
     let tint: Color
 
     var body: some View {
+        let theme = themeManager.selectedTheme
+
         VStack(alignment: .leading, spacing: 10) {
             Label(title, systemImage: icon)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(tint)
                 .labelStyle(.iconLeading)
 
             Spacer(minLength: 0)
 
             Text(value)
                 .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(theme.textPrimary)
 
             Text(caption)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(theme.textSecondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
         .padding(18)
-        .glassCard(
-            cornerRadius: 22,
-            tint: LinearGradient(
-                colors: [tint.opacity(0.18), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            shadowColor: tint.opacity(0.2)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(theme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(
+                            LinearGradient(
+                                colors: [tint.opacity(0.15), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(tint.opacity(0.2), lineWidth: 1)
+                )
         )
+        .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+        .animation(.easeInOut(duration: 0.3), value: theme)
     }
 }
 
