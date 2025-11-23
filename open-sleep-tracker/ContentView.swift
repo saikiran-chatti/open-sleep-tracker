@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var audioRecorder = AudioRecorder()
+    @StateObject private var themeManager = ThemeManager()
     @State private var selectedTab: Tab = .dashboard
     @State private var showOnboarding = false
 
@@ -46,8 +47,10 @@ struct ContentView: View {
                 .tag(Tab.settings)
         }
         .tint(.accentBlue)
+        .environmentObject(themeManager)
         .sheet(isPresented: $showOnboarding) {
             OnboardingView(isPresented: $showOnboarding)
+                .environmentObject(themeManager)
         }
         .onAppear {
             // Check if first launch
