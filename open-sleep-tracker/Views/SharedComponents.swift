@@ -7,6 +7,130 @@
 
 import SwiftUI
 
+// MARK: - Theme System
+
+enum AppTheme: String, CaseIterable, Identifiable {
+    // Solid Themes
+    case pitchBlack = "Pitch Black"
+    case midnight = "Midnight"
+    case ocean = "Ocean"
+    case forest = "Forest"
+    case charcoal = "Charcoal"
+
+    // Gradient Themes
+    case aurora = "Aurora"
+    case sunset = "Sunset"
+    case cosmos = "Cosmos"
+    case lavender = "Lavender"
+
+    var id: String { rawValue }
+
+    var isGradient: Bool {
+        switch self {
+        case .aurora, .sunset, .cosmos, .lavender:
+            return true
+        default:
+            return false
+        }
+    }
+
+    static var solidThemes: [AppTheme] {
+        [.pitchBlack, .midnight, .ocean, .forest, .charcoal]
+    }
+
+    static var gradientThemes: [AppTheme] {
+        [.aurora, .sunset, .cosmos, .lavender]
+    }
+
+    var colors: [Color] {
+        switch self {
+        // Solid Themes
+        case .pitchBlack:
+            return [Color.black]
+        case .midnight:
+            return [Color(red: 0.08, green: 0.09, blue: 0.14)]
+        case .ocean:
+            return [Color(red: 0.06, green: 0.12, blue: 0.18)]
+        case .forest:
+            return [Color(red: 0.08, green: 0.14, blue: 0.10)]
+        case .charcoal:
+            return [Color(red: 0.10, green: 0.10, blue: 0.12)]
+
+        // Gradient Themes
+        case .aurora:
+            return [
+                Color(red: 0.12, green: 0.14, blue: 0.24),
+                Color(red: 0.09, green: 0.11, blue: 0.23),
+                Color(red: 0.06, green: 0.08, blue: 0.18)
+            ]
+        case .sunset:
+            return [
+                Color(red: 0.18, green: 0.10, blue: 0.14),
+                Color(red: 0.14, green: 0.08, blue: 0.12),
+                Color(red: 0.10, green: 0.06, blue: 0.10)
+            ]
+        case .cosmos:
+            return [
+                Color(red: 0.10, green: 0.08, blue: 0.18),
+                Color(red: 0.08, green: 0.06, blue: 0.16),
+                Color(red: 0.06, green: 0.04, blue: 0.12)
+            ]
+        case .lavender:
+            return [
+                Color(red: 0.14, green: 0.10, blue: 0.18),
+                Color(red: 0.12, green: 0.08, blue: 0.16),
+                Color(red: 0.08, green: 0.06, blue: 0.12)
+            ]
+        }
+    }
+
+    var accentColor: Color {
+        switch self {
+        case .pitchBlack:
+            return .white
+        case .midnight, .aurora, .cosmos:
+            return .accentBlue
+        case .ocean:
+            return .accentTeal
+        case .forest:
+            return .accentGreen
+        case .charcoal:
+            return .white.opacity(0.8)
+        case .sunset:
+            return .accentOrange
+        case .lavender:
+            return .accentPurple
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .pitchBlack: return "circle.slash"
+        case .midnight: return "moon.fill"
+        case .ocean: return "water.waves"
+        case .forest: return "leaf.fill"
+        case .charcoal: return "circle.fill"
+        case .aurora: return "sparkles"
+        case .sunset: return "sun.horizon.fill"
+        case .cosmos: return "star.fill"
+        case .lavender: return "flower.fill"
+        }
+    }
+}
+
+class ThemeManager: ObservableObject {
+    @Published var selectedTheme: AppTheme {
+        didSet {
+            UserDefaults.standard.set(selectedTheme.rawValue, forKey: "selectedTheme")
+        }
+    }
+
+    init() {
+        let savedTheme = UserDefaults.standard.string(forKey: "selectedTheme") ?? AppTheme.aurora.rawValue
+        self.selectedTheme = AppTheme(rawValue: savedTheme) ?? .aurora
+    }
+}
+
 // MARK: - Section Header
 
 struct SectionHeader: View {
@@ -192,51 +316,50 @@ struct CircularScoreView: View {
 // MARK: - App Background
 
 struct AppBackgroundView: View {
-    @State private var animate = false
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.12, green: 0.14, blue: 0.24),
-                Color(red: 0.09, green: 0.11, blue: 0.23),
-                Color(red: 0.06, green: 0.08, blue: 0.18)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        let theme = themeManager.selectedTheme
+
+        Group {
+            if theme.colors.count == 1 {
+                // Solid theme
+                theme.colors[0]
+            } else {
+                // Gradient theme
+                LinearGradient(
+                    colors: theme.colors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        }
         .overlay(
+            // Subtle accent overlay (non-animated)
             RadialGradient(
                 colors: [
-                    Color.accentBlue.opacity(0.28),
-                    Color.accentPurple.opacity(0.18),
+                    theme.accentColor.opacity(0.15),
+                    theme.accentColor.opacity(0.05),
                     .clear
                 ],
-                center: animate ? .bottomTrailing : .topLeading,
-                startRadius: 60,
-                endRadius: 520
-            )
-            .animation(
-                .easeInOut(duration: 12)
-                    .repeatForever(autoreverses: true),
-                value: animate
+                center: .topTrailing,
+                startRadius: 100,
+                endRadius: 400
             )
         )
         .overlay(
-            AngularGradient(
+            // Subtle bottom accent
+            RadialGradient(
                 colors: [
-                    .white.opacity(0.04),
-                    .clear,
-                    .accentPurple.opacity(0.06)
+                    theme.accentColor.opacity(0.08),
+                    .clear
                 ],
-                center: animate ? .center : .topLeading,
-                angle: .degrees(animate ? 90 : -120)
+                center: .bottomLeading,
+                startRadius: 50,
+                endRadius: 300
             )
-            .blur(radius: 160)
         )
         .ignoresSafeArea()
-        .onAppear {
-            animate = true
-        }
     }
 }
 

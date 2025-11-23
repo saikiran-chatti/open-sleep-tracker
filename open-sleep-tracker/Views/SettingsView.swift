@@ -10,6 +10,7 @@ import SwiftUI
 // MARK: - Settings View
 
 struct SettingsView: View {
+    @EnvironmentObject var themeManager: ThemeManager
     @State private var notificationsEnabled = true
     @State private var healthSyncEnabled = true
     @State private var standbyWidgetsEnabled = true
@@ -21,6 +22,23 @@ struct SettingsView: View {
                 AppBackgroundView()
 
                 List {
+                    Section("Appearance") {
+                        NavigationLink {
+                            ThemeSelectionView()
+                        } label: {
+                            HStack {
+                                Label("Theme", systemImage: "paintpalette.fill")
+                                Spacer()
+                                HStack(spacing: 6) {
+                                    Image(systemName: themeManager.selectedTheme.icon)
+                                        .foregroundStyle(themeManager.selectedTheme.accentColor)
+                                    Text(themeManager.selectedTheme.rawValue)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+
                     Section("Agents") {
                         Toggle(isOn: $advancedMode) {
                             Label("Advanced Agent Strategies", systemImage: "brain.head.profile")
@@ -480,5 +498,94 @@ struct WidgetConfigView: View {
             }
         }
         .navigationTitle("Widget Configuration")
+    }
+}
+
+// MARK: - Theme Selection View
+
+struct ThemeSelectionView: View {
+    @EnvironmentObject var themeManager: ThemeManager
+
+    var body: some View {
+        ZStack {
+            AppBackgroundView()
+
+            List {
+                Section("Solid Themes") {
+                    ForEach(AppTheme.solidThemes) { theme in
+                        ThemeRow(theme: theme, isSelected: themeManager.selectedTheme == theme) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                themeManager.selectedTheme = theme
+                            }
+                        }
+                    }
+                }
+
+                Section("Gradient Themes") {
+                    ForEach(AppTheme.gradientThemes) { theme in
+                        ThemeRow(theme: theme, isSelected: themeManager.selectedTheme == theme) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                themeManager.selectedTheme = theme
+                            }
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+        }
+        .navigationTitle("Theme")
+    }
+}
+
+struct ThemeRow: View {
+    let theme: AppTheme
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 16) {
+                // Theme preview
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(
+                        theme.colors.count == 1
+                            ? AnyShapeStyle(theme.colors[0])
+                            : AnyShapeStyle(LinearGradient(
+                                colors: theme.colors,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                    )
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(theme.accentColor.opacity(0.5), lineWidth: 1)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: theme.icon)
+                            .foregroundStyle(theme.accentColor)
+                            .font(.footnote)
+                        Text(theme.rawValue)
+                            .foregroundStyle(.primary)
+                    }
+
+                    Text(theme.isGradient ? "Gradient" : "Solid")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.accentBlue)
+                        .font(.title3)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
