@@ -104,6 +104,60 @@ enum AppTheme: String, CaseIterable, Identifiable {
         }
     }
 
+    var secondaryAccent: Color {
+        switch self {
+        case .pitchBlack, .charcoal:
+            return .accentBlue
+        case .midnight, .aurora:
+            return .accentPurple
+        case .ocean:
+            return .accentBlue
+        case .forest:
+            return .accentTeal
+        case .cosmos:
+            return .accentPurple
+        case .sunset:
+            return .accentPurple
+        case .lavender:
+            return .accentTeal
+        }
+    }
+
+    var cardBackground: Color {
+        switch self {
+        case .pitchBlack:
+            return Color.white.opacity(0.06)
+        case .midnight:
+            return Color(red: 0.12, green: 0.13, blue: 0.20)
+        case .ocean:
+            return Color(red: 0.10, green: 0.16, blue: 0.24)
+        case .forest:
+            return Color(red: 0.12, green: 0.18, blue: 0.14)
+        case .charcoal:
+            return Color(red: 0.14, green: 0.14, blue: 0.16)
+        case .aurora:
+            return Color(red: 0.16, green: 0.18, blue: 0.28)
+        case .sunset:
+            return Color(red: 0.22, green: 0.14, blue: 0.18)
+        case .cosmos:
+            return Color(red: 0.14, green: 0.12, blue: 0.22)
+        case .lavender:
+            return Color(red: 0.18, green: 0.14, blue: 0.22)
+        }
+    }
+
+    var textPrimary: Color {
+        .white
+    }
+
+    var textSecondary: Color {
+        .white.opacity(0.7)
+    }
+
+    var textTertiary: Color {
+        .white.opacity(0.5)
+    }
+
     var icon: String {
         switch self {
         case .pitchBlack: return "circle.slash"
@@ -135,6 +189,7 @@ class ThemeManager: ObservableObject {
 // MARK: - Section Header
 
 struct SectionHeader: View {
+    @EnvironmentObject var themeManager: ThemeManager
     let title: String
     let subtitle: String
 
@@ -143,11 +198,11 @@ struct SectionHeader: View {
             Text(title)
                 .font(.title3)
                 .fontWeight(.bold)
-                .foregroundStyle(.white)
+                .foregroundStyle(themeManager.selectedTheme.textPrimary)
 
             Text(subtitle)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(themeManager.selectedTheme.textSecondary)
         }
     }
 }
@@ -155,49 +210,87 @@ struct SectionHeader: View {
 // MARK: - Metric Components
 
 struct MetricTile: View {
+    @EnvironmentObject var themeManager: ThemeManager
     let title: String
     let value: String
     let caption: String
     let icon: String
 
+    @State private var appeared = false
+
     var body: some View {
+        let theme = themeManager.selectedTheme
+
         VStack(alignment: .leading, spacing: 8) {
-            Label(title, systemImage: icon)
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.7))
-                .labelStyle(.iconOnly)
-                .overlay(
-                    Text(title)
-                        .font(.footnote)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.white.opacity(0.7))
-                        .offset(x: 24),
-                    alignment: .leading
-                )
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.footnote)
+                    .foregroundStyle(theme.accentColor)
+
+                Text(title)
+                    .font(.footnote)
+                    .fontWeight(.medium)
+                    .foregroundStyle(theme.textSecondary)
+            }
 
             Text(value)
                 .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(theme.textPrimary)
+                .contentTransition(.numericText())
 
             Text(caption)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(theme.textTertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .glassCard(
-            cornerRadius: 22,
-            tint: LinearGradient(
-                colors: [.white.opacity(0.08), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            shadowColor: .black.opacity(0.25)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(theme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    theme.accentColor.opacity(0.08),
+                                    .clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    theme.accentColor.opacity(0.2),
+                                    theme.accentColor.opacity(0.05)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
         )
+        .shadow(color: theme.accentColor.opacity(0.1), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 6)
+        .scaleEffect(appeared ? 1.0 : 0.95)
+        .opacity(appeared ? 1.0 : 0.0)
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: appeared)
+        .animation(.easeInOut(duration: 0.3), value: theme)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.1)) {
+                appeared = true
+            }
+        }
     }
 }
 
 struct MetricPill: View {
+    @EnvironmentObject var themeManager: ThemeManager
     let title: String
     let value: String
     let icon: String
@@ -207,12 +300,12 @@ struct MetricPill: View {
         VStack(alignment: .leading, spacing: 6) {
             Label(title, systemImage: icon)
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(themeManager.selectedTheme.textSecondary)
                 .labelStyle(.iconLeading)
 
             Text(value)
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(themeManager.selectedTheme.textPrimary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -224,6 +317,7 @@ struct MetricPill: View {
             Capsule()
                 .stroke(tint.opacity(0.35), lineWidth: 1)
         )
+        .animation(.easeInOut(duration: 0.3), value: themeManager.selectedTheme)
     }
 }
 
@@ -283,34 +377,49 @@ struct StatusPill: View {
 // MARK: - Circular Score View
 
 struct CircularScoreView: View {
+    @EnvironmentObject var themeManager: ThemeManager
     let score: Int
+    @State private var animatedScore: CGFloat = 0
 
     var body: some View {
+        let theme = themeManager.selectedTheme
+
         ZStack {
             Circle()
-                .stroke(.white.opacity(0.08), lineWidth: 12)
+                .stroke(theme.cardBackground, lineWidth: 12)
 
             Circle()
-                .trim(from: 0, to: CGFloat(score) / 100.0)
+                .trim(from: 0, to: animatedScore / 100.0)
                 .stroke(
                     AngularGradient(
-                        colors: [.accentBlue, .accentPurple, .accentTeal],
+                        colors: [theme.accentColor, theme.secondaryAccent, theme.accentColor],
                         center: .center
                     ),
                     style: StrokeStyle(lineWidth: 12, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
+                .animation(.spring(response: 0.8, dampingFraction: 0.7), value: animatedScore)
 
             VStack(spacing: 4) {
                 Text("\(score)")
                     .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(theme.textPrimary)
                 Text("Sleep Score")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(theme.textSecondary)
             }
         }
         .frame(width: 120, height: 120)
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
+                animatedScore = CGFloat(score)
+            }
+        }
+        .onChange(of: score) { newValue in
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                animatedScore = CGFloat(newValue)
+            }
+        }
     }
 }
 
@@ -352,7 +461,7 @@ struct AppBackgroundView: View {
             // Subtle bottom accent
             RadialGradient(
                 colors: [
-                    theme.accentColor.opacity(0.08),
+                    theme.secondaryAccent.opacity(0.08),
                     .clear
                 ],
                 center: .bottomLeading,
@@ -361,12 +470,32 @@ struct AppBackgroundView: View {
             )
         )
         .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.4), value: theme)
     }
 }
 
-// MARK: - Glass Card Modifier
+// MARK: - Themed Glass Card Modifier
 
 extension View {
+    func themedCard(
+        theme: AppTheme,
+        cornerRadius: CGFloat = 24,
+        padding: CGFloat = 20
+    ) -> some View {
+        self
+            .padding(padding)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(theme.cardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .stroke(theme.accentColor.opacity(0.12), lineWidth: 1)
+                    )
+            )
+            .shadow(color: .black.opacity(0.25), radius: 16, x: 0, y: 8)
+            .animation(.easeInOut(duration: 0.3), value: theme)
+    }
+
     func glassCard(
         cornerRadius: CGFloat = 24,
         tint: LinearGradient? = nil,

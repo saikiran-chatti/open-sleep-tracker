@@ -167,42 +167,84 @@ private struct RecordingsHeader: View {
 }
 
 private struct SummaryTile: View {
+    @EnvironmentObject var themeManager: ThemeManager
     let title: String
     let value: String
     let caption: String
     let icon: String
     let tint: Color
 
+    @State private var appeared = false
+
     var body: some View {
+        let theme = themeManager.selectedTheme
+
         VStack(alignment: .leading, spacing: 10) {
-            Label(title, systemImage: icon)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.7))
-                .labelStyle(.iconLeading)
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundStyle(tint)
+
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(tint)
+            }
 
             Spacer(minLength: 0)
 
             Text(value)
                 .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(theme.textPrimary)
+                .contentTransition(.numericText())
 
             Text(caption)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(theme.textSecondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
         .padding(18)
-        .glassCard(
-            cornerRadius: 22,
-            tint: LinearGradient(
-                colors: [tint.opacity(0.18), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            shadowColor: tint.opacity(0.2)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(theme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(
+                            LinearGradient(
+                                colors: [tint.opacity(0.12), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    tint.opacity(0.3),
+                                    tint.opacity(0.1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
         )
+        .shadow(color: tint.opacity(0.15), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+        .scaleEffect(appeared ? 1.0 : 0.95)
+        .opacity(appeared ? 1.0 : 0.0)
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: appeared)
+        .animation(.easeInOut(duration: 0.3), value: theme)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.1)) {
+                appeared = true
+            }
+        }
     }
 }
 
