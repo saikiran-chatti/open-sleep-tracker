@@ -148,6 +148,8 @@ struct DashboardHeroCard: View {
     @EnvironmentObject var themeManager: ThemeManager
     let summary: DashboardData.SleepSummary
 
+    @State private var appeared = false
+
     var body: some View {
         let theme = themeManager.selectedTheme
 
@@ -173,8 +175,14 @@ struct DashboardHeroCard: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(summary.trend >= 0 ? Color.accentGreen.opacity(0.2) : Color.accentOrange.opacity(0.2))
-                    .clipShape(Capsule())
+                    .background(
+                        Capsule()
+                            .fill(summary.trend >= 0 ? Color.accentGreen.opacity(0.2) : Color.accentOrange.opacity(0.2))
+                            .overlay(
+                                Capsule()
+                                    .stroke(summary.trend >= 0 ? Color.accentGreen.opacity(0.3) : Color.accentOrange.opacity(0.3), lineWidth: 1)
+                            )
+                    )
                 }
 
                 Spacer()
@@ -182,7 +190,15 @@ struct DashboardHeroCard: View {
                 CircularScoreView(score: summary.sleepScore)
             }
 
-            Divider().background(theme.textTertiary)
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [theme.accentColor.opacity(0.3), theme.secondaryAccent.opacity(0.3)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(height: 1)
 
             Grid(horizontalSpacing: 16, verticalSpacing: 16) {
                 GridRow {
@@ -205,8 +221,8 @@ struct DashboardHeroCard: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    theme.accentColor.opacity(0.3),
-                                    theme.secondaryAccent.opacity(0.2),
+                                    theme.accentColor.opacity(0.25),
+                                    theme.secondaryAccent.opacity(0.15),
                                     .clear
                                 ],
                                 startPoint: .topLeading,
@@ -216,11 +232,30 @@ struct DashboardHeroCard: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 28)
-                        .stroke(theme.accentColor.opacity(0.2), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    theme.accentColor.opacity(0.3),
+                                    theme.secondaryAccent.opacity(0.15)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
                 )
         )
-        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+        .shadow(color: theme.accentColor.opacity(0.15), radius: 16, x: 0, y: 8)
+        .shadow(color: .black.opacity(0.25), radius: 24, x: 0, y: 12)
+        .scaleEffect(appeared ? 1.0 : 0.95)
+        .opacity(appeared ? 1.0 : 0.0)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: appeared)
         .animation(.easeInOut(duration: 0.3), value: theme)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                appeared = true
+            }
+        }
     }
 }
 
@@ -248,50 +283,99 @@ struct DashboardQuickNavigation: View {
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                 ForEach(destinations) { destination in
-                    Button {
-                        onSelect(destination.tab)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Image(systemName: destination.icon)
-                                .font(.title3)
-                                .foregroundStyle(theme.accentColor)
-                                .padding(12)
-                                .background(theme.accentColor.opacity(0.15))
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-
-                            Spacer(minLength: 0)
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(destination.title)
-                                    .font(.headline)
-                                    .foregroundStyle(theme.textPrimary)
-
-                                Text(destination.subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 22)
-                                .fill(theme.cardBackground)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 22)
-                                        .stroke(theme.accentColor.opacity(0.1), lineWidth: 1)
-                                )
-                        )
-                        .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(destination.title)
-                    .accessibilityHint(destination.subtitle)
+                    NavigationCardButton(
+                        destination: destination,
+                        theme: theme,
+                        onSelect: onSelect
+                    )
                 }
             }
         }
         .animation(.easeInOut(duration: 0.3), value: theme)
+    }
+}
+
+struct NavigationCardButton: View {
+    let destination: DashboardQuickDestination
+    let theme: AppTheme
+    let onSelect: (ContentView.Tab) -> Void
+
+    @State private var isPressed = false
+
+    var body: some View {
+        Button {
+            onSelect(destination.tab)
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                Image(systemName: destination.icon)
+                    .font(.title3)
+                    .foregroundStyle(theme.accentColor)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(theme.accentColor.opacity(0.15))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(theme.accentColor.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+
+                Spacer(minLength: 0)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(destination.title)
+                        .font(.headline)
+                        .foregroundStyle(theme.textPrimary)
+
+                    Text(destination.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(theme.cardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        theme.accentColor.opacity(isPressed ? 0.15 : 0.05),
+                                        .clear
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(theme.accentColor.opacity(isPressed ? 0.25 : 0.1), lineWidth: 1)
+                    )
+            )
+            .shadow(color: .black.opacity(isPressed ? 0.1 : 0.25), radius: isPressed ? 6 : 14, x: 0, y: isPressed ? 3 : 8)
+            .scaleEffect(isPressed ? 0.97 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(destination.title)
+        .accessibilityHint(destination.subtitle)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        isPressed = true
+                    }
+                }
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                        isPressed = false
+                    }
+                }
+        )
     }
 }
 

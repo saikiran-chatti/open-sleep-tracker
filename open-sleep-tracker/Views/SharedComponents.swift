@@ -216,26 +216,27 @@ struct MetricTile: View {
     let caption: String
     let icon: String
 
+    @State private var appeared = false
+
     var body: some View {
         let theme = themeManager.selectedTheme
 
         VStack(alignment: .leading, spacing: 8) {
-            Label(title, systemImage: icon)
-                .font(.footnote)
-                .foregroundStyle(theme.textSecondary)
-                .labelStyle(.iconOnly)
-                .overlay(
-                    Text(title)
-                        .font(.footnote)
-                        .fontWeight(.medium)
-                        .foregroundStyle(theme.textSecondary)
-                        .offset(x: 24),
-                    alignment: .leading
-                )
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.footnote)
+                    .foregroundStyle(theme.accentColor)
+
+                Text(title)
+                    .font(.footnote)
+                    .fontWeight(.medium)
+                    .foregroundStyle(theme.textSecondary)
+            }
 
             Text(value)
                 .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundStyle(theme.textPrimary)
+                .contentTransition(.numericText())
 
             Text(caption)
                 .font(.caption)
@@ -248,11 +249,43 @@ struct MetricTile: View {
                 .fill(theme.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 22)
-                        .stroke(theme.accentColor.opacity(0.15), lineWidth: 1)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    theme.accentColor.opacity(0.08),
+                                    .clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    theme.accentColor.opacity(0.2),
+                                    theme.accentColor.opacity(0.05)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
                 )
         )
-        .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+        .shadow(color: theme.accentColor.opacity(0.1), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 6)
+        .scaleEffect(appeared ? 1.0 : 0.95)
+        .opacity(appeared ? 1.0 : 0.0)
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: appeared)
         .animation(.easeInOut(duration: 0.3), value: theme)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.1)) {
+                appeared = true
+            }
+        }
     }
 }
 
