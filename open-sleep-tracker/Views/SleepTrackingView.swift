@@ -12,6 +12,7 @@ import SwiftUI
 struct SleepTrackingView: View {
     @ObservedObject var audioRecorder: AudioRecorder
     @State private var schedule = DashboardData.SessionSchedule.sample
+    @State private var showStandBy = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
@@ -23,7 +24,10 @@ struct SleepTrackingView: View {
                     LazyVStack(spacing: ResponsiveSpacing.sectionSpacing(horizontalSizeClass)) {
                         ScheduleOverview(schedule: schedule)
 
-                        LiveSessionControl(audioRecorder: audioRecorder)
+                        LiveSessionControl(
+                            audioRecorder: audioRecorder,
+                            onStandByTrigger: DeviceInfo.isIPad ? { showStandBy = true } : nil
+                        )
 
                         RoutineChecklist(actions: schedule.routines)
 
@@ -37,9 +41,24 @@ struct SleepTrackingView: View {
             .navigationTitle("Sleep Sessions")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Optimize") {
-                        schedule = DashboardData.SessionSchedule.optimized
+                    HStack(spacing: 12) {
+                        if DeviceInfo.isIPad && audioRecorder.isRecording {
+                            Button {
+                                showStandBy = true
+                            } label: {
+                                Label("StandBy", systemImage: "display")
+                            }
+                        }
+
+                        Button("Optimize") {
+                            schedule = DashboardData.SessionSchedule.optimized
+                        }
                     }
+                }
+            }
+            .fullScreenCover(isPresented: $showStandBy) {
+                if DeviceInfo.isIPad {
+                    StandByView(audioRecorder: audioRecorder)
                 }
             }
         }
@@ -117,6 +136,7 @@ struct ScheduleOverview: View {
 
 struct LiveSessionControl: View {
     @ObservedObject var audioRecorder: AudioRecorder
+    var onStandByTrigger: (() -> Void)?
     @State private var animatePulse = false
 
     var body: some View {
@@ -208,7 +228,52 @@ struct LiveSessionControl: View {
                 .frame(height: 240)
 
                 if audioRecorder.isRecording {
-                    SessionMetrics(duration: audioRecorder.recordingDuration, level: audioRecorder.audioLevel)
+                    VStack(spacing: 16) {
+                        SessionMetrics(duration: audioRecorder.recordingDuration, level: audioRecorder.audioLevel)
+
+                        // StandBy Mode Button (iPad only)
+                        if let standByAction = onStandByTrigger, DeviceInfo.isIPad {
+                            Button {
+                                standByAction()
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "display")
+                                        .font(.title3)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Enter StandBy Mode")
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
+                                        Text("Optimized nightstand display")
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.7))
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote)
+                                        .foregroundStyle(.white.opacity(0.5))
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(.white.opacity(0.08))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(
+                                                    LinearGradient(
+                                                        colors: [.accentBlue.opacity(0.3), .accentPurple.opacity(0.2)],
+                                                        startPoint: .leading,
+                                                        endPoint: .trailing
+                                                    ),
+                                                    lineWidth: 1
+                                                )
+                                        )
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 } else {
                     SessionScheduler()
                 }

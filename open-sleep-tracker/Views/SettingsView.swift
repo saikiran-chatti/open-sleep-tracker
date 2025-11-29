@@ -62,6 +62,27 @@ struct SettingsView: View {
                         }
                     }
 
+                    // StandBy Mode (iPad only)
+                    if DeviceInfo.isIPad {
+                        Section {
+                            NavigationLink {
+                                StandBySettingsView()
+                            } label: {
+                                HStack {
+                                    Label("StandBy Mode", systemImage: "display")
+                                    Spacer()
+                                    Text("iPad Only")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        } header: {
+                            Text("StandBy Mode")
+                        } footer: {
+                            Text("Optimize your iPad as a nightstand display during sleep tracking sessions")
+                        }
+                    }
+
                     Section("Health & Privacy") {
                         Toggle(isOn: $healthSyncEnabled) {
                             Label("HealthKit Synchronization", systemImage: "heart.text.square")
@@ -590,3 +611,117 @@ struct ThemeRow: View {
         .buttonStyle(.plain)
     }
 }
+
+// MARK: - StandBy Mode Settings
+
+struct StandBySettingsView: View {
+    @StateObject private var settings = StandBySettings()
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Auto-Activate During Recording", isOn: $settings.autoActivate)
+                Toggle("Show Seconds on Clock", isOn: $settings.showSeconds)
+                Toggle("Keep Screen On", isOn: $settings.keepScreenOn)
+            } header: {
+                Label("Behavior", systemImage: "gearshape")
+            } footer: {
+                Text("Auto-activate will automatically enter StandBy Mode when you start recording on iPad")
+            }
+
+            Section {
+                Toggle("Red Tint (Night Mode)", isOn: $settings.redTintEnabled)
+                Toggle("Auto-Dim After 30 Seconds", isOn: $settings.autoDimEnabled)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Default Brightness")
+                        Spacer()
+                        Text("\(Int(settings.brightness * 100))%")
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $settings.brightness, in: 0.1...1.0)
+                        .tint(.accentBlue)
+                }
+            } header: {
+                Label("Display", systemImage: "sun.max")
+            } footer: {
+                Text("Red tint reduces blue light for better sleep. Screen will dim after 30 seconds of inactivity.")
+            }
+
+            Section {
+                Picker("Widget Layout", selection: $settings.widgetLayout) {
+                    ForEach(StandBySettings.WidgetLayout.allCases) { layout in
+                        HStack {
+                            Image(systemName: layout.icon)
+                            Text(layout.rawValue)
+                        }
+                        .tag(layout)
+                    }
+                }
+
+                Text(settings.widgetLayout.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+            } header: {
+                Label("Layout", systemImage: "rectangle.split.2x1")
+            }
+
+            Section {
+                Picker("Background Style", selection: $settings.backgroundStyle) {
+                    ForEach(StandBySettings.BackgroundStyle.allCases) { style in
+                        HStack {
+                            Image(systemName: style.icon)
+                            Text(style.rawValue)
+                        }
+                        .tag(style)
+                    }
+                }
+
+                Text(settings.backgroundStyle.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+            } header: {
+                Label("Background", systemImage: "photo")
+            }
+
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "hand.tap")
+                            .foregroundStyle(.accentBlue)
+                        Text("Single Tap")
+                        Spacer()
+                        Text("Wake Display")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Image(systemName: "hand.point.up.left")
+                            .foregroundStyle(.accentPurple)
+                        Text("Long Press")
+                        Spacer()
+                        Text("Show Controls")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Image(systemName: "hand.draw")
+                            .foregroundStyle(.accentTeal)
+                        Text("Swipe Left/Right")
+                        Spacer()
+                        Text("Change Layout")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.subheadline)
+            } header: {
+                Label("Gestures", systemImage: "hand.raised")
+            }
+        }
+        .navigationTitle("StandBy Mode")
+    }
+}
+
