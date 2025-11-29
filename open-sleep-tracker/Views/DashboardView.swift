@@ -14,6 +14,7 @@ struct DashboardScreen: View {
     @ObservedObject var audioRecorder: AudioRecorder
     @State private var dashboardData = DashboardData.sample
     @State private var selectedSection: DashboardSection = .overview
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     enum DashboardSection: String, CaseIterable, Identifiable {
         case overview
@@ -53,7 +54,7 @@ struct DashboardScreen: View {
                 AppBackgroundView()
 
                 ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 24) {
+                    LazyVStack(spacing: ResponsiveSpacing.sectionSpacing(horizontalSizeClass)) {
                         DashboardHeroCard(summary: dashboardData.summary)
 
                         DashboardQuickNavigation(
@@ -69,8 +70,9 @@ struct DashboardScreen: View {
 
                         sectionContent
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 24)
+                    .responsivePadding(horizontalSizeClass)
+                    .padding(.vertical, ResponsiveSpacing.containerPadding(horizontalSizeClass))
+                    .maxContentWidth()
                 }
             }
             .navigationTitle("Sleep Intelligence")
@@ -146,6 +148,7 @@ struct DashboardScreen: View {
 
 struct DashboardHeroCard: View {
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let summary: DashboardData.SleepSummary
 
     @State private var appeared = false
@@ -153,28 +156,28 @@ struct DashboardHeroCard: View {
     var body: some View {
         let theme = themeManager.selectedTheme
 
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 24 : 20) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 12 : 8) {
                     Text(summary.dateRangeLabel.uppercased())
-                        .font(.caption)
+                        .font(ResponsiveFont.caption(horizontalSizeClass))
                         .fontWeight(.semibold)
                         .foregroundStyle(theme.textSecondary)
                         .tracking(1.1)
 
                     Text(summary.headline)
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .font(ResponsiveFont.largeTitle(horizontalSizeClass))
                         .foregroundStyle(theme.textPrimary)
 
                     Label {
                         Text(summary.trendDescription)
-                            .font(.footnote)
+                            .font(ResponsiveFont.caption(horizontalSizeClass))
                             .foregroundColor(summary.trend >= 0 ? .accentGreen : .accentOrange)
                     } icon: {
                         Image(systemName: summary.trend >= 0 ? "arrow.up.right" : "arrow.down.right")
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, DeviceInfo.isIPad ? 16 : 12)
+                    .padding(.vertical, DeviceInfo.isIPad ? 8 : 6)
                     .background(
                         Capsule()
                             .fill(summary.trend >= 0 ? Color.accentGreen.opacity(0.2) : Color.accentOrange.opacity(0.2))
@@ -269,19 +272,25 @@ struct DashboardQuickDestination: Identifiable {
 
 struct DashboardQuickNavigation: View {
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let destinations: [DashboardQuickDestination]
     let onSelect: (ContentView.Tab) -> Void
+
+    private var gridColumns: [GridItem] {
+        let columnCount = DeviceInfo.isIPad && horizontalSizeClass == .regular ? 4 : 2
+        return Array(repeating: GridItem(.flexible()), count: columnCount)
+    }
 
     var body: some View {
         let theme = themeManager.selectedTheme
 
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 20 : 16) {
             SectionHeader(
                 title: "Quick Navigation",
                 subtitle: "Open focused screens for deeper control"
             )
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+            LazyVGrid(columns: gridColumns, spacing: DeviceInfo.isIPad ? 20 : 16) {
                 ForEach(destinations) { destination in
                     NavigationCardButton(
                         destination: destination,
@@ -296,6 +305,7 @@ struct DashboardQuickNavigation: View {
 }
 
 struct NavigationCardButton: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let destination: DashboardQuickDestination
     let theme: AppTheme
     let onSelect: (ContentView.Tab) -> Void
@@ -306,36 +316,36 @@ struct NavigationCardButton: View {
         Button {
             onSelect(destination.tab)
         } label: {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 16 : 12) {
                 Image(systemName: destination.icon)
-                    .font(.title3)
+                    .font(DeviceInfo.isIPad ? .title2 : .title3)
                     .foregroundStyle(theme.accentColor)
-                    .padding(12)
+                    .padding(DeviceInfo.isIPad ? 16 : 12)
                     .background(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: DeviceInfo.isIPad ? 18 : 14)
                             .fill(theme.accentColor.opacity(0.15))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 14)
+                                RoundedRectangle(cornerRadius: DeviceInfo.isIPad ? 18 : 14)
                                     .stroke(theme.accentColor.opacity(0.3), lineWidth: 1)
                             )
                     )
 
                 Spacer(minLength: 0)
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 6 : 4) {
                     Text(destination.title)
-                        .font(.headline)
+                        .font(ResponsiveFont.headline(horizontalSizeClass))
                         .foregroundStyle(theme.textPrimary)
 
                     Text(destination.subtitle)
-                        .font(.caption)
+                        .font(ResponsiveFont.caption(horizontalSizeClass))
                         .foregroundStyle(theme.textSecondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
-            .padding(20)
+            .frame(maxWidth: .infinity, minHeight: DeviceInfo.isIPad ? 160 : 130, alignment: .leading)
+            .padding(ResponsiveSpacing.cardPadding(horizontalSizeClass))
             .background(
                 RoundedRectangle(cornerRadius: 22)
                     .fill(theme.cardBackground)

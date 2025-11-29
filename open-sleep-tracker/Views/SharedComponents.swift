@@ -190,18 +190,19 @@ class ThemeManager: ObservableObject {
 
 struct SectionHeader: View {
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let title: String
     let subtitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 8 : 6) {
             Text(title)
-                .font(.title3)
+                .font(ResponsiveFont.title3(horizontalSizeClass))
                 .fontWeight(.bold)
                 .foregroundStyle(themeManager.selectedTheme.textPrimary)
 
             Text(subtitle)
-                .font(.caption)
+                .font(ResponsiveFont.caption(horizontalSizeClass))
                 .foregroundStyle(themeManager.selectedTheme.textSecondary)
         }
     }
@@ -211,6 +212,7 @@ struct SectionHeader: View {
 
 struct MetricTile: View {
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let title: String
     let value: String
     let caption: String
@@ -221,29 +223,29 @@ struct MetricTile: View {
     var body: some View {
         let theme = themeManager.selectedTheme
 
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 10 : 8) {
+            HStack(spacing: DeviceInfo.isIPad ? 10 : 8) {
                 Image(systemName: icon)
-                    .font(.footnote)
+                    .font(ResponsiveFont.caption(horizontalSizeClass))
                     .foregroundStyle(theme.accentColor)
 
                 Text(title)
-                    .font(.footnote)
+                    .font(ResponsiveFont.caption(horizontalSizeClass))
                     .fontWeight(.medium)
                     .foregroundStyle(theme.textSecondary)
             }
 
             Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .font(DeviceInfo.isIPad ? .system(size: 28, weight: .bold, design: .rounded) : .system(size: 24, weight: .bold, design: .rounded))
                 .foregroundStyle(theme.textPrimary)
                 .contentTransition(.numericText())
 
             Text(caption)
-                .font(.caption)
+                .font(ResponsiveFont.caption(horizontalSizeClass))
                 .foregroundStyle(theme.textTertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
+        .padding(DeviceInfo.isIPad ? 20 : 18)
         .background(
             RoundedRectangle(cornerRadius: 22)
                 .fill(theme.cardBackground)
@@ -378,15 +380,24 @@ struct StatusPill: View {
 
 struct CircularScoreView: View {
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let score: Int
     @State private var animatedScore: CGFloat = 0
+
+    private var circleSize: CGFloat {
+        DeviceInfo.isIPad ? 140 : 120
+    }
+
+    private var lineWidth: CGFloat {
+        DeviceInfo.isIPad ? 14 : 12
+    }
 
     var body: some View {
         let theme = themeManager.selectedTheme
 
         ZStack {
             Circle()
-                .stroke(theme.cardBackground, lineWidth: 12)
+                .stroke(theme.cardBackground, lineWidth: lineWidth)
 
             Circle()
                 .trim(from: 0, to: animatedScore / 100.0)
@@ -395,21 +406,21 @@ struct CircularScoreView: View {
                         colors: [theme.accentColor, theme.secondaryAccent, theme.accentColor],
                         center: .center
                     ),
-                    style: StrokeStyle(lineWidth: 12, lineCap: .round)
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
                 .animation(.spring(response: 0.8, dampingFraction: 0.7), value: animatedScore)
 
-            VStack(spacing: 4) {
+            VStack(spacing: DeviceInfo.isIPad ? 6 : 4) {
                 Text("\(score)")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .font(.system(size: DeviceInfo.isIPad ? 42 : 36, weight: .bold, design: .rounded))
                     .foregroundStyle(theme.textPrimary)
                 Text("Sleep Score")
-                    .font(.caption)
+                    .font(ResponsiveFont.caption(horizontalSizeClass))
                     .foregroundStyle(theme.textSecondary)
             }
         }
-        .frame(width: 120, height: 120)
+        .frame(width: circleSize, height: circleSize)
         .onAppear {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
                 animatedScore = CGFloat(score)
