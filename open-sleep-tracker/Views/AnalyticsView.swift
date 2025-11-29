@@ -12,6 +12,7 @@ import SwiftUI
 struct AnalyticsView: View {
     @State private var analytics = DashboardData.Analytics.sample
     @State private var selectedTimeRange: TimeRange = .week
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     enum TimeRange: String, CaseIterable {
         case week = "Week"
@@ -25,7 +26,7 @@ struct AnalyticsView: View {
                 AppBackgroundView()
 
                 ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 24) {
+                    LazyVStack(spacing: ResponsiveSpacing.sectionSpacing(horizontalSizeClass)) {
                         // Time Range Picker
                         Picker("Time Range", selection: $selectedTimeRange) {
                             ForEach(TimeRange.allCases, id: \.self) { range in
@@ -40,8 +41,9 @@ struct AnalyticsView: View {
                         TrendCards(trends: analytics.trends)
                         FocusAreas(focusAreas: analytics.focusAreas)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 24)
+                    .responsivePadding(horizontalSizeClass)
+                    .padding(.vertical, ResponsiveSpacing.containerPadding(horizontalSizeClass))
+                    .maxContentWidth()
                 }
             }
             .navigationTitle("Deep Analytics")
@@ -275,13 +277,20 @@ struct TrendCards: View {
 // MARK: - Focus Areas
 
 struct FocusAreas: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let focusAreas: [DashboardData.Analytics.FocusArea]
 
+    private var gridColumns: [GridItem] {
+        let minWidth: CGFloat = DeviceInfo.isIPad ? 220 : 170
+        let spacing: CGFloat = DeviceInfo.isIPad ? 20 : 16
+        return [GridItem(.adaptive(minimum: minWidth), spacing: spacing)]
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 20 : 16) {
             SectionHeader(title: "Focus Areas", subtitle: "Personalized recommendations for the week")
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 16)], spacing: 16) {
+            LazyVGrid(columns: gridColumns, spacing: DeviceInfo.isIPad ? 20 : 16) {
                 ForEach(focusAreas) { area in
                     VStack(alignment: .leading, spacing: 12) {
                         Label {
