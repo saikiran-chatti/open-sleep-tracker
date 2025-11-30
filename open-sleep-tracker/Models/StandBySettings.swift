@@ -18,11 +18,6 @@ class StandBySettings: ObservableObject {
         didSet { UserDefaults.standard.set(autoActivate, forKey: "standby_autoActivate") }
     }
 
-    /// Current widget layout
-    @Published var widgetLayout: WidgetLayout {
-        didSet { UserDefaults.standard.set(widgetLayout.rawValue, forKey: "standby_widgetLayout") }
-    }
-
     /// Background style
     @Published var backgroundStyle: BackgroundStyle {
         didSet { UserDefaults.standard.set(backgroundStyle.rawValue, forKey: "standby_backgroundStyle") }
@@ -53,6 +48,22 @@ class StandBySettings: ObservableObject {
         didSet { UserDefaults.standard.set(keepScreenOn, forKey: "standby_keepScreenOn") }
     }
 
+    /// Enabled widget pages
+    @Published var enabledPages: [StandByPage] {
+        didSet {
+            let pageIds = enabledPages.map { $0.rawValue }
+            UserDefaults.standard.set(pageIds, forKey: "standby_enabledPages")
+        }
+    }
+
+    /// Widgets enabled for the widgets page
+    @Published var enabledWidgets: [WidgetType] {
+        didSet {
+            let widgetIds = enabledWidgets.map { $0.rawValue }
+            UserDefaults.standard.set(widgetIds, forKey: "standby_enabledWidgets")
+        }
+    }
+
     // MARK: - Initialization
 
     init() {
@@ -63,54 +74,128 @@ class StandBySettings: ObservableObject {
         self.showSeconds = UserDefaults.standard.object(forKey: "standby_showSeconds") as? Bool ?? false
         self.keepScreenOn = UserDefaults.standard.object(forKey: "standby_keepScreenOn") as? Bool ?? true
 
-        if let layoutRaw = UserDefaults.standard.string(forKey: "standby_widgetLayout"),
-           let layout = WidgetLayout(rawValue: layoutRaw) {
-            self.widgetLayout = layout
-        } else {
-            self.widgetLayout = .balanced
-        }
-
         if let styleRaw = UserDefaults.standard.string(forKey: "standby_backgroundStyle"),
            let style = BackgroundStyle(rawValue: styleRaw) {
             self.backgroundStyle = style
         } else {
             self.backgroundStyle = .gradient
         }
+
+        // Load enabled pages
+        if let pageIds = UserDefaults.standard.array(forKey: "standby_enabledPages") as? [String] {
+            self.enabledPages = pageIds.compactMap { StandByPage(rawValue: $0) }
+        } else {
+            self.enabledPages = [.clock, .widgets, .recording]
+        }
+
+        // Load enabled widgets
+        if let widgetIds = UserDefaults.standard.array(forKey: "standby_enabledWidgets") as? [String] {
+            self.enabledWidgets = widgetIds.compactMap { WidgetType(rawValue: $0) }
+        } else {
+            self.enabledWidgets = [.sleepScore, .previousNight, .environment, .recordings]
+        }
     }
 
-    // MARK: - Widget Layouts
+    // MARK: - StandBy Pages
 
-    enum WidgetLayout: String, CaseIterable, Identifiable {
-        case minimal = "Minimal"
-        case clockFocused = "Clock Focused"
-        case balanced = "Balanced"
-        case recordingFocused = "Recording Focused"
+    enum StandByPage: String, CaseIterable, Identifiable {
+        case clock = "Clock"
+        case widgets = "Widgets"
+        case recording = "Recording"
+        case metrics = "Metrics"
 
         var id: String { rawValue }
 
         var description: String {
             switch self {
-            case .minimal:
-                return "Large clock with subtle recording indicator"
-            case .clockFocused:
-                return "Prominent time display with compact stats"
-            case .balanced:
-                return "Clock, recording status, and sleep metrics"
-            case .recordingFocused:
-                return "Real-time audio visualization and session details"
+            case .clock:
+                return "Large clock display with date"
+            case .widgets:
+                return "Customizable sleep tracking widgets"
+            case .recording:
+                return "Live audio visualization and status"
+            case .metrics:
+                return "Detailed session metrics"
             }
         }
 
         var icon: String {
             switch self {
-            case .minimal:
+            case .clock:
                 return "clock"
-            case .clockFocused:
-                return "clock.badge"
-            case .balanced:
-                return "rectangle.split.2x1"
-            case .recordingFocused:
+            case .widgets:
+                return "square.grid.2x2"
+            case .recording:
                 return "waveform.circle"
+            case .metrics:
+                return "chart.bar"
+            }
+        }
+    }
+
+    // MARK: - Widget Types
+
+    enum WidgetType: String, CaseIterable, Identifiable {
+        case sleepScore = "Sleep Score"
+        case previousNight = "Previous Night"
+        case environment = "Environment"
+        case recordings = "Recordings"
+        case sleepGoals = "Sleep Goals"
+        case sleepStreak = "Sleep Streak"
+        case weeklyTrend = "Weekly Trend"
+        case activeAgents = "Active Agents"
+        case heartRate = "Heart Rate"
+        case bedtimeCountdown = "Bedtime Countdown"
+
+        var id: String { rawValue }
+
+        var description: String {
+            switch self {
+            case .sleepScore:
+                return "Tonight's or average sleep score"
+            case .previousNight:
+                return "Last night's sleep summary"
+            case .environment:
+                return "Room temperature, humidity, noise"
+            case .recordings:
+                return "Total sessions and snore events"
+            case .sleepGoals:
+                return "Progress toward sleep goals"
+            case .sleepStreak:
+                return "Consecutive nights of good sleep"
+            case .weeklyTrend:
+                return "Sleep quality over the week"
+            case .activeAgents:
+                return "AI agents running status"
+            case .heartRate:
+                return "Current heart rate (if available)"
+            case .bedtimeCountdown:
+                return "Time until target bedtime"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .sleepScore:
+                return "gauge.with.needle"
+            case .previousNight:
+                return "moon.zzz"
+            case .environment:
+                return "thermometer.medium"
+            case .recordings:
+                return "waveform"
+            case .sleepGoals:
+                return "target"
+            case .sleepStreak:
+                return "flame"
+            case .weeklyTrend:
+                return "chart.line.uptrend.xyaxis"
+            case .activeAgents:
+                return "cpu.fill"
+            case .heartRate:
+                return "heart.fill"
+            case .bedtimeCountdown:
+                return "clock.badge.checkmark"
             }
         }
     }
@@ -165,7 +250,7 @@ class StandByState: ObservableObject {
     @Published var isActive: Bool = false
     @Published var isDimmed: Bool = false
     @Published var lastInteraction: Date = Date()
-    @Published var currentLayoutIndex: Int = 0
+    @Published var currentPageIndex: Int = 0
 
     func activate() {
         isActive = true

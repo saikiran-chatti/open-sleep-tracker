@@ -650,22 +650,31 @@ struct StandBySettingsView: View {
             }
 
             Section {
-                Picker("Widget Layout", selection: $settings.widgetLayout) {
-                    ForEach(StandBySettings.WidgetLayout.allCases) { layout in
-                        HStack {
-                            Image(systemName: layout.icon)
-                            Text(layout.rawValue)
-                        }
-                        .tag(layout)
+                NavigationLink {
+                    PageCustomizationView(settings: settings)
+                } label: {
+                    HStack {
+                        Label("Enabled Pages", systemImage: "square.grid.2x2")
+                        Spacer()
+                        Text("\(settings.enabledPages.count)")
+                            .foregroundStyle(.secondary)
                     }
                 }
 
-                Text(settings.widgetLayout.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 8)
+                NavigationLink {
+                    WidgetCustomizationView(settings: settings)
+                } label: {
+                    HStack {
+                        Label("Enabled Widgets", systemImage: "square.grid.3x3")
+                        Spacer()
+                        Text("\(settings.enabledWidgets.count)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
             } header: {
-                Label("Layout", systemImage: "rectangle.split.2x1")
+                Label("Content", systemImage: "rectangle.split.2x1")
+            } footer: {
+                Text("Swipe between pages and customize which widgets appear in your StandBy Mode")
             }
 
             Section {
@@ -712,7 +721,7 @@ struct StandBySettingsView: View {
                             .foregroundStyle(.accentTeal)
                         Text("Swipe Left/Right")
                         Spacer()
-                        Text("Change Layout")
+                        Text("Switch Pages")
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -722,6 +731,96 @@ struct StandBySettingsView: View {
             }
         }
         .navigationTitle("StandBy Mode")
+    }
+}
+
+// MARK: - Page Customization View
+
+struct PageCustomizationView: View {
+    @ObservedObject var settings: StandBySettings
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(StandBySettings.StandByPage.allCases) { page in
+                    Toggle(isOn: Binding(
+                        get: { settings.enabledPages.contains(page) },
+                        set: { isEnabled in
+                            if isEnabled {
+                                if !settings.enabledPages.contains(page) {
+                                    settings.enabledPages.append(page)
+                                }
+                            } else {
+                                settings.enabledPages.removeAll { $0 == page }
+                            }
+                        }
+                    )) {
+                        HStack {
+                            Image(systemName: page.icon)
+                                .foregroundStyle(.accentBlue)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(page.rawValue)
+                                    .font(.subheadline)
+                                Text(page.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Available Pages")
+            } footer: {
+                Text("Select which pages appear in your StandBy Mode. Swipe left or right to navigate between enabled pages.")
+            }
+        }
+        .navigationTitle("Enabled Pages")
+    }
+}
+
+// MARK: - Widget Customization View
+
+struct WidgetCustomizationView: View {
+    @ObservedObject var settings: StandBySettings
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(StandBySettings.WidgetType.allCases) { widget in
+                    Toggle(isOn: Binding(
+                        get: { settings.enabledWidgets.contains(widget) },
+                        set: { isEnabled in
+                            if isEnabled {
+                                if !settings.enabledWidgets.contains(widget) {
+                                    settings.enabledWidgets.append(widget)
+                                }
+                            } else {
+                                settings.enabledWidgets.removeAll { $0 == widget }
+                            }
+                        }
+                    )) {
+                        HStack {
+                            Image(systemName: widget.icon)
+                                .foregroundStyle(.accentPurple)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(widget.rawValue)
+                                    .font(.subheadline)
+                                Text(widget.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Available Widgets")
+            } footer: {
+                Text("Select which widgets appear on the Widgets page in StandBy Mode. Widgets display real-time sleep tracking data.")
+            }
+        }
+        .navigationTitle("Enabled Widgets")
     }
 }
 

@@ -32,6 +32,18 @@ struct StandByView: View {
                 .opacity(standByState.isDimmed ? 0.3 : 1.0)
                 .animation(.easeInOut(duration: 0.5), value: standByState.isDimmed)
 
+            // Page Indicators
+            if settings.enabledPages.count > 1 && !showControls {
+                VStack {
+                    Spacer()
+                    PageIndicators(
+                        currentPage: standByState.currentPageIndex,
+                        totalPages: settings.enabledPages.count
+                    )
+                    .padding(.bottom, 40)
+                }
+            }
+
             // Controls Overlay
             if showControls {
                 StandByControls(
@@ -74,30 +86,27 @@ struct StandByView: View {
 
     @ViewBuilder
     private var contentLayout: some View {
-        switch settings.widgetLayout {
-        case .minimal:
-            MinimalLayout(
-                currentTime: currentTime,
-                isRecording: audioRecorder.isRecording,
-                showSeconds: settings.showSeconds
-            )
-        case .clockFocused:
-            ClockFocusedLayout(
-                currentTime: currentTime,
-                audioRecorder: audioRecorder,
-                showSeconds: settings.showSeconds
-            )
-        case .balanced:
-            BalancedLayout(
-                currentTime: currentTime,
-                audioRecorder: audioRecorder,
-                showSeconds: settings.showSeconds
-            )
-        case .recordingFocused:
-            RecordingFocusedLayout(
-                currentTime: currentTime,
-                audioRecorder: audioRecorder
-            )
+        TabView(selection: $standByState.currentPageIndex) {
+            ForEach(Array(settings.enabledPages.enumerated()), id: \.element) { index, page in
+                pageView(for: page)
+                    .tag(index)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .ignoresSafeArea()
+    }
+
+    @ViewBuilder
+    private func pageView(for page: StandBySettings.StandByPage) -> some View {
+        switch page {
+        case .clock:
+            ClockPage(currentTime: currentTime, isRecording: audioRecorder.isRecording, showSeconds: settings.showSeconds)
+        case .widgets:
+            WidgetsPage(audioRecorder: audioRecorder, enabledWidgets: settings.enabledWidgets)
+        case .recording:
+            RecordingPage(currentTime: currentTime, audioRecorder: audioRecorder)
+        case .metrics:
+            MetricsPage(currentTime: currentTime, audioRecorder: audioRecorder)
         }
     }
 
@@ -109,27 +118,7 @@ struct StandByView: View {
 
     private func handleSwipe(value: DragGesture.Value) {
         standByState.recordInteraction()
-
-        let horizontalMovement = value.translation.width
-        if abs(horizontalMovement) > 100 {
-            // Cycle through layouts
-            let layouts = StandBySettings.WidgetLayout.allCases
-            let currentIndex = layouts.firstIndex(of: settings.widgetLayout) ?? 0
-
-            if horizontalMovement > 0 {
-                // Swipe right - previous layout
-                let newIndex = (currentIndex - 1 + layouts.count) % layouts.count
-                withAnimation(.spring(response: 0.4)) {
-                    settings.widgetLayout = layouts[newIndex]
-                }
-            } else {
-                // Swipe left - next layout
-                let newIndex = (currentIndex + 1) % layouts.count
-                withAnimation(.spring(response: 0.4)) {
-                    settings.widgetLayout = layouts[newIndex]
-                }
-            }
-        }
+        // Page swiping is handled by TabView automatically
     }
 
     private func checkAutoDim() {
@@ -160,9 +149,9 @@ struct StandByView: View {
     }
 }
 
-// MARK: - Layout: Minimal
+// MARK: - Page: Clock
 
-struct MinimalLayout: View {
+struct ClockPage: View {
     let currentTime: Date
     let isRecording: Bool
     let showSeconds: Bool
@@ -195,83 +184,34 @@ struct MinimalLayout: View {
     }
 }
 
-// MARK: - Layout: Clock Focused
+// MARK: - Page: Widgets
 
-struct ClockFocusedLayout: View {
-    let currentTime: Date
+struct WidgetsPage: View {
     let audioRecorder: AudioRecorder
-    let showSeconds: Bool
+    let enabledWidgets: [StandBySettings.WidgetType]
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 20),
+        GridItem(.flexible(), spacing: 20)
+    ]
 
     var body: some View {
-        GeometryReader { geometry in
-            HStack(spacing: 0) {
-                // Left: Large Clock
-                VStack(spacing: 24) {
-                    Spacer()
-
-                    StandByClockWidget(time: currentTime, showSeconds: showSeconds, size: .large)
-
-                    if audioRecorder.isRecording {
-                        Text(audioRecorder.recordingDuration.formattedDurationDescription)
-                            .font(.system(size: 32, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.8))
-                    }
-
-                    Spacer()
+        ScrollView(showsIndicators: false) {
+            LazyVGrid(columns: columns, spacing: 20) {
+                ForEach(enabledWidgets, id: \.self) { widget in
+                    StandByWidgetContainer(widget: widget, audioRecorder: audioRecorder)
+                        .frame(height: 180)
                 }
-                .frame(width: geometry.size.width * 0.6)
-
-                // Right: Compact Stats
-                VStack(spacing: 32) {
-                    Spacer()
-
-                    if audioRecorder.isRecording {
-                        CompactStatsWidget(audioRecorder: audioRecorder)
-                    }
-
-                    Spacer()
-                }
-                .frame(width: geometry.size.width * 0.4)
             }
+            .padding(40)
         }
-        .padding(40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-// MARK: - Layout: Balanced
+// MARK: - Page: Recording
 
-struct BalancedLayout: View {
-    let currentTime: Date
-    let audioRecorder: AudioRecorder
-    let showSeconds: Bool
-
-    var body: some View {
-        VStack(spacing: 48) {
-            Spacer()
-
-            // Top: Clock
-            StandByClockWidget(time: currentTime, showSeconds: showSeconds, size: .medium)
-
-            // Middle: Recording Status
-            if audioRecorder.isRecording {
-                RecordingStatusWidget(audioRecorder: audioRecorder)
-            }
-
-            // Bottom: Session Stats
-            if audioRecorder.isRecording {
-                SessionStatsWidget(audioRecorder: audioRecorder)
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 60)
-        .padding(.vertical, 40)
-    }
-}
-
-// MARK: - Layout: Recording Focused
-
-struct RecordingFocusedLayout: View {
+struct RecordingPage: View {
     let currentTime: Date
     let audioRecorder: AudioRecorder
 
@@ -286,6 +226,10 @@ struct RecordingFocusedLayout: View {
             // Center: Large Waveform
             if audioRecorder.isRecording {
                 AudioVisualizerWidget(audioLevel: audioRecorder.audioLevel)
+            } else {
+                Text("Start recording to see live visualization")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
             }
 
             // Bottom: Detailed Stats
@@ -296,6 +240,40 @@ struct RecordingFocusedLayout: View {
             Spacer()
         }
         .padding(.horizontal, 60)
+    }
+}
+
+// MARK: - Page: Metrics
+
+struct MetricsPage: View {
+    let currentTime: Date
+    let audioRecorder: AudioRecorder
+
+    var body: some View {
+        VStack(spacing: 48) {
+            Spacer()
+
+            // Top: Clock
+            StandByClockWidget(time: currentTime, showSeconds: false, size: .medium)
+
+            // Middle: Recording Status
+            if audioRecorder.isRecording {
+                RecordingStatusWidget(audioRecorder: audioRecorder)
+            }
+
+            // Bottom: Session Stats
+            if audioRecorder.isRecording {
+                SessionStatsWidget(audioRecorder: audioRecorder)
+            } else {
+                Text("Start recording to see metrics")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 60)
+        .padding(.vertical, 40)
     }
 }
 
@@ -796,6 +774,30 @@ struct StandByControls: View {
             .padding(40)
             .frame(maxWidth: 600)
         }
+    }
+}
+
+// MARK: - Page Indicators
+
+struct PageIndicators: View {
+    let currentPage: Int
+    let totalPages: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ForEach(0..<totalPages, id: \.self) { index in
+                Circle()
+                    .fill(index == currentPage ? Color.white : Color.white.opacity(0.3))
+                    .frame(width: index == currentPage ? 10 : 8, height: index == currentPage ? 10 : 8)
+                    .animation(.spring(response: 0.3), value: currentPage)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(
+            Capsule()
+                .fill(.ultraThinMaterial.opacity(0.5))
+        )
     }
 }
 
