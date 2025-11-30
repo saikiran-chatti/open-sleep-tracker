@@ -62,6 +62,27 @@ struct SettingsView: View {
                         }
                     }
 
+                    // StandBy Mode (iPad only)
+                    if DeviceInfo.isIPad {
+                        Section {
+                            NavigationLink {
+                                StandBySettingsView()
+                            } label: {
+                                HStack {
+                                    Label("StandBy Mode", systemImage: "display")
+                                    Spacer()
+                                    Text("iPad Only")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        } header: {
+                            Text("StandBy Mode")
+                        } footer: {
+                            Text("Optimize your iPad as a nightstand display during sleep tracking sessions")
+                        }
+                    }
+
                     Section("Health & Privacy") {
                         Toggle(isOn: $healthSyncEnabled) {
                             Label("HealthKit Synchronization", systemImage: "heart.text.square")
@@ -590,3 +611,216 @@ struct ThemeRow: View {
         .buttonStyle(.plain)
     }
 }
+
+// MARK: - StandBy Mode Settings
+
+struct StandBySettingsView: View {
+    @StateObject private var settings = StandBySettings()
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Auto-Activate During Recording", isOn: $settings.autoActivate)
+                Toggle("Show Seconds on Clock", isOn: $settings.showSeconds)
+                Toggle("Keep Screen On", isOn: $settings.keepScreenOn)
+            } header: {
+                Label("Behavior", systemImage: "gearshape")
+            } footer: {
+                Text("Auto-activate will automatically enter StandBy Mode when you start recording on iPad")
+            }
+
+            Section {
+                Toggle("Red Tint (Night Mode)", isOn: $settings.redTintEnabled)
+                Toggle("Auto-Dim After 30 Seconds", isOn: $settings.autoDimEnabled)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Default Brightness")
+                        Spacer()
+                        Text("\(Int(settings.brightness * 100))%")
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $settings.brightness, in: 0.1...1.0)
+                        .tint(.accentBlue)
+                }
+            } header: {
+                Label("Display", systemImage: "sun.max")
+            } footer: {
+                Text("Red tint reduces blue light for better sleep. Screen will dim after 30 seconds of inactivity.")
+            }
+
+            Section {
+                NavigationLink {
+                    PageCustomizationView(settings: settings)
+                } label: {
+                    HStack {
+                        Label("Enabled Pages", systemImage: "square.grid.2x2")
+                        Spacer()
+                        Text("\(settings.enabledPages.count)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                NavigationLink {
+                    WidgetCustomizationView(settings: settings)
+                } label: {
+                    HStack {
+                        Label("Enabled Widgets", systemImage: "square.grid.3x3")
+                        Spacer()
+                        Text("\(settings.enabledWidgets.count)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Label("Content", systemImage: "rectangle.split.2x1")
+            } footer: {
+                Text("Swipe between pages and customize which widgets appear in your StandBy Mode")
+            }
+
+            Section {
+                Picker("Background Style", selection: $settings.backgroundStyle) {
+                    ForEach(StandBySettings.BackgroundStyle.allCases) { style in
+                        HStack {
+                            Image(systemName: style.icon)
+                            Text(style.rawValue)
+                        }
+                        .tag(style)
+                    }
+                }
+
+                Text(settings.backgroundStyle.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+            } header: {
+                Label("Background", systemImage: "photo")
+            }
+
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "hand.tap")
+                            .foregroundStyle(.accentBlue)
+                        Text("Single Tap")
+                        Spacer()
+                        Text("Wake Display")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Image(systemName: "hand.point.up.left")
+                            .foregroundStyle(.accentPurple)
+                        Text("Long Press")
+                        Spacer()
+                        Text("Show Controls")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Image(systemName: "hand.draw")
+                            .foregroundStyle(.accentTeal)
+                        Text("Swipe Left/Right")
+                        Spacer()
+                        Text("Switch Pages")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.subheadline)
+            } header: {
+                Label("Gestures", systemImage: "hand.raised")
+            }
+        }
+        .navigationTitle("StandBy Mode")
+    }
+}
+
+// MARK: - Page Customization View
+
+struct PageCustomizationView: View {
+    @ObservedObject var settings: StandBySettings
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(StandBySettings.StandByPage.allCases) { page in
+                    Toggle(isOn: Binding(
+                        get: { settings.enabledPages.contains(page) },
+                        set: { isEnabled in
+                            if isEnabled {
+                                if !settings.enabledPages.contains(page) {
+                                    settings.enabledPages.append(page)
+                                }
+                            } else {
+                                settings.enabledPages.removeAll { $0 == page }
+                            }
+                        }
+                    )) {
+                        HStack {
+                            Image(systemName: page.icon)
+                                .foregroundStyle(.accentBlue)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(page.rawValue)
+                                    .font(.subheadline)
+                                Text(page.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Available Pages")
+            } footer: {
+                Text("Select which pages appear in your StandBy Mode. Swipe left or right to navigate between enabled pages.")
+            }
+        }
+        .navigationTitle("Enabled Pages")
+    }
+}
+
+// MARK: - Widget Customization View
+
+struct WidgetCustomizationView: View {
+    @ObservedObject var settings: StandBySettings
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(StandBySettings.WidgetType.allCases) { widget in
+                    Toggle(isOn: Binding(
+                        get: { settings.enabledWidgets.contains(widget) },
+                        set: { isEnabled in
+                            if isEnabled {
+                                if !settings.enabledWidgets.contains(widget) {
+                                    settings.enabledWidgets.append(widget)
+                                }
+                            } else {
+                                settings.enabledWidgets.removeAll { $0 == widget }
+                            }
+                        }
+                    )) {
+                        HStack {
+                            Image(systemName: widget.icon)
+                                .foregroundStyle(.accentPurple)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(widget.rawValue)
+                                    .font(.subheadline)
+                                Text(widget.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Available Widgets")
+            } footer: {
+                Text("Select which widgets appear on the Widgets page in StandBy Mode. Widgets display real-time sleep tracking data.")
+            }
+        }
+        .navigationTitle("Enabled Widgets")
+    }
+}
+
