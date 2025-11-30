@@ -11,6 +11,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var notificationsEnabled = true
     @State private var healthSyncEnabled = true
     @State private var standbyWidgetsEnabled = true

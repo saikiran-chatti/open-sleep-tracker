@@ -12,6 +12,7 @@ import SwiftUI
 struct SleepTrackingView: View {
     @ObservedObject var audioRecorder: AudioRecorder
     @State private var schedule = DashboardData.SessionSchedule.sample
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         NavigationStack {
@@ -19,7 +20,7 @@ struct SleepTrackingView: View {
                 AppBackgroundView()
 
                 ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 24) {
+                    LazyVStack(spacing: ResponsiveSpacing.sectionSpacing(horizontalSizeClass)) {
                         ScheduleOverview(schedule: schedule)
 
                         LiveSessionControl(audioRecorder: audioRecorder)
@@ -28,8 +29,9 @@ struct SleepTrackingView: View {
 
                         EnvironmentSection(readings: schedule.environmentReadings)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 24)
+                    .responsivePadding(horizontalSizeClass)
+                    .padding(.vertical, ResponsiveSpacing.containerPadding(horizontalSizeClass))
+                    .maxContentWidth()
                 }
             }
             .navigationTitle("Sleep Sessions")
@@ -401,16 +403,23 @@ struct RoutineChecklist: View {
 // MARK: - Environment Section
 
 struct EnvironmentSection: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let readings: [DashboardData.SessionSchedule.EnvironmentReading]
 
+    private var gridColumns: [GridItem] {
+        let minWidth: CGFloat = DeviceInfo.isIPad ? 200 : 160
+        let spacing: CGFloat = DeviceInfo.isIPad ? 20 : 16
+        return [GridItem(.adaptive(minimum: minWidth), spacing: spacing)]
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 20 : 16) {
             SectionHeader(
                 title: "Environment Readiness",
                 subtitle: "Tracked with StandBy & Health Integration Agents"
             )
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 16) {
+            LazyVGrid(columns: gridColumns, spacing: DeviceInfo.isIPad ? 20 : 16) {
                 ForEach(readings) { reading in
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {

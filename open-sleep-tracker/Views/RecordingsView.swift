@@ -13,32 +13,33 @@ struct RecordingsView: View {
     @State private var selectedRecording: AudioRecording?
     @State private var recordingPendingDeletion: AudioRecording?
     @State private var showDeleteConfirmation = false
-    
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     private var recordings: [AudioRecording] {
         if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
             return audioRecorder.recordings
         }
-        
+
         return audioRecorder.recordings.filter { recording in
             let needle = searchText.lowercased()
             return recording.fileName.lowercased().contains(needle) ||
             recording.formattedDate.lowercased().contains(needle)
         }
     }
-    
+
     private var summary: RecordingSummary {
         RecordingSummary(recordings: audioRecorder.recordings)
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 AppBackgroundView()
-                
+
                 ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 24) {
+                    LazyVStack(spacing: ResponsiveSpacing.sectionSpacing(horizontalSizeClass)) {
                         RecordingsHeader(summary: summary)
-                        
+
                         if audioRecorder.isRecording {
                             LiveRecordingBanner(
                                 duration: audioRecorder.recordingDuration,
@@ -46,17 +47,17 @@ struct RecordingsView: View {
                                 stopAction: audioRecorder.stopRecording
                             )
                         }
-                        
+
                         if recordings.isEmpty {
                             EmptyRecordingsState(startAction: startRecording)
                         } else {
-                            VStack(alignment: .leading, spacing: 16) {
+                            VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 20 : 16) {
                                 SectionHeader(
                                     title: "Saved Sessions",
                                     subtitle: "Powered by Audio Classification Agent"
                                 )
-                                
-                                LazyVStack(spacing: 16) {
+
+                                LazyVStack(spacing: DeviceInfo.isIPad ? 20 : 16) {
                                     ForEach(recordings) { recording in
                                         RecordingCard(
                                             recording: recording,
@@ -73,8 +74,9 @@ struct RecordingsView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 24)
+                    .responsivePadding(horizontalSizeClass)
+                    .padding(.vertical, ResponsiveSpacing.containerPadding(horizontalSizeClass))
+                    .maxContentWidth()
                 }
             }
             .navigationTitle("Sound Library")
@@ -120,16 +122,23 @@ struct RecordingsView: View {
 // MARK: - Header & Summary
 
 private struct RecordingsHeader: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let summary: RecordingSummary
-    
+
+    private var gridColumns: [GridItem] {
+        let columnCount = DeviceInfo.isIPad && horizontalSizeClass == .regular ? 4 : 2
+        let spacing: CGFloat = DeviceInfo.isIPad ? 20 : 16
+        return Array(repeating: GridItem(.flexible(), spacing: spacing), count: columnCount)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 24 : 20) {
             SectionHeader(
                 title: "Captured Nights",
                 subtitle: "Snore samples for personalization & model retraining"
             )
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 2), spacing: 16) {
+
+            LazyVGrid(columns: gridColumns, spacing: DeviceInfo.isIPad ? 20 : 16) {
                 SummaryTile(
                     title: "Sessions",
                     value: "\(summary.count)",
