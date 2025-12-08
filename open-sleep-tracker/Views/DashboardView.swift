@@ -2,7 +2,7 @@
 //  DashboardView.swift
 //  open-sleep-tracker
 //
-//  Created by AI Agent on 11/22/25.
+//  Apple-style minimalist dashboard
 //
 
 import SwiftUI
@@ -13,130 +13,42 @@ struct DashboardScreen: View {
     @Binding var selectedTab: ContentView.Tab
     @ObservedObject var audioRecorder: AudioRecorder
     @State private var dashboardData = DashboardData.sample
-    @State private var selectedSection: DashboardSection = .overview
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
-    enum DashboardSection: String, CaseIterable, Identifiable {
-        case overview
-        case insights
-        case agents
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .overview: return "Overview"
-            case .insights: return "Insights"
-            case .agents: return "Agents"
-            }
-        }
-
-        var icon: String {
-            switch self {
-            case .overview: return "rectangle.grid.2x2"
-            case .insights: return "chart.bar.doc.horizontal"
-            case .agents: return "person.3.fill"
-            }
-        }
-
-        var subtitle: String {
-            switch self {
-            case .overview: return "Tonight at a glance"
-            case .insights: return "Trends & guidance"
-            case .agents: return "Agent network health"
-            }
-        }
-    }
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppBackgroundView()
+            ScrollView {
+                LazyVStack(spacing: 24) {
+                    // Sleep Score Card
+                    SleepScoreCard(summary: dashboardData.summary)
 
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: ResponsiveSpacing.sectionSpacing(horizontalSizeClass)) {
-                        DashboardHeroCard(summary: dashboardData.summary)
+                    // Quick Actions
+                    QuickActionsSection(
+                        audioRecorder: audioRecorder,
+                        onNavigate: { tab in
+                            withAnimation { selectedTab = tab }
+                        }
+                    )
 
-                        DashboardQuickNavigation(
-                            destinations: quickDestinations,
-                            onSelect: { tab in
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedTab = tab
-                                }
-                            }
-                        )
+                    // Today's Metrics
+                    MetricsSection(summary: dashboardData.summary)
 
-                        DashboardSectionPicker(selection: $selectedSection)
+                    // Insights
+                    InsightsSection(insights: dashboardData.insights)
 
-                        sectionContent
-                    }
-                    .responsivePadding(horizontalSizeClass)
-                    .padding(.vertical, ResponsiveSpacing.containerPadding(horizontalSizeClass))
-                    .maxContentWidth()
+                    // Agent Status
+                    AgentSection(agents: dashboardData.agents)
                 }
+                .padding()
             }
-            .navigationTitle("Sleep Intelligence")
+            .background(Color.appBackground)
+            .navigationTitle("Sleep")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         dashboardData = DashboardData.sampleNextPhase()
                     } label: {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                    }
-                    .accessibilityLabel("Refresh sample data")
-                }
-            }
-        }
-    }
-
-    private var quickDestinations: [DashboardQuickDestination] {
-        [
-            .init(
-                title: "Sleep Sessions",
-                subtitle: "Run overnight monitoring",
-                icon: "moon.zzz.fill",
-                tab: .sessions
-            ),
-            .init(
-                title: "Recordings",
-                subtitle: "Review captured audio",
-                icon: "waveform",
-                tab: .recordings
-            ),
-            .init(
-                title: "Insights",
-                subtitle: "Deep-dive analytics",
-                icon: "chart.bar.xaxis",
-                tab: .analytics
-            ),
-            .init(
-                title: "Settings",
-                subtitle: "Agent preferences & health",
-                icon: "slider.horizontal.3",
-                tab: .settings
-            )
-        ]
-    }
-
-    @ViewBuilder
-    private var sectionContent: some View {
-        switch selectedSection {
-        case .overview:
-            VStack(spacing: 20) {
-                HighlightGrid(highlights: dashboardData.highlights)
-                LiveSessionControl(audioRecorder: audioRecorder)
-            }
-        case .insights:
-            VStack(spacing: 20) {
-                InsightsSection(insights: dashboardData.insights)
-                TimelineSection(events: dashboardData.timeline)
-            }
-        case .agents:
-            VStack(spacing: 20) {
-                AgentStatusSection(agents: dashboardData.agents)
-                AgentSnapshotCard(agents: dashboardData.agents) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        selectedTab = .settings
+                        Image(systemName: "arrow.clockwise")
                     }
                 }
             }
@@ -144,48 +56,29 @@ struct DashboardScreen: View {
     }
 }
 
-// MARK: - Dashboard Components
+// MARK: - Sleep Score Card
 
-struct DashboardHeroCard: View {
-    @EnvironmentObject var themeManager: ThemeManager
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+struct SleepScoreCard: View {
     let summary: DashboardData.SleepSummary
 
-    @State private var appeared = false
-
     var body: some View {
-        let theme = themeManager.selectedTheme
-
-        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 24 : 20) {
+        VStack(spacing: 20) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 12 : 8) {
-                    Text(summary.dateRangeLabel.uppercased())
-                        .font(ResponsiveFont.caption(horizontalSizeClass))
-                        .fontWeight(.semibold)
-                        .foregroundStyle(theme.textSecondary)
-                        .tracking(1.1)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Last Night")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
 
                     Text(summary.headline)
-                        .font(ResponsiveFont.largeTitle(horizontalSizeClass))
-                        .foregroundStyle(theme.textPrimary)
+                        .font(.title2)
+                        .fontWeight(.semibold)
 
-                    Label {
-                        Text(summary.trendDescription)
-                            .font(ResponsiveFont.caption(horizontalSizeClass))
-                            .foregroundColor(summary.trend >= 0 ? .accentGreen : .accentOrange)
-                    } icon: {
+                    HStack(spacing: 4) {
                         Image(systemName: summary.trend >= 0 ? "arrow.up.right" : "arrow.down.right")
+                        Text(summary.trendDescription)
                     }
-                    .padding(.horizontal, DeviceInfo.isIPad ? 16 : 12)
-                    .padding(.vertical, DeviceInfo.isIPad ? 8 : 6)
-                    .background(
-                        Capsule()
-                            .fill(summary.trend >= 0 ? Color.accentGreen.opacity(0.2) : Color.accentOrange.opacity(0.2))
-                            .overlay(
-                                Capsule()
-                                    .stroke(summary.trend >= 0 ? Color.accentGreen.opacity(0.3) : Color.accentOrange.opacity(0.3), lineWidth: 1)
-                            )
-                    )
+                    .font(.subheadline)
+                    .foregroundStyle(summary.trend >= 0 ? .green : .orange)
                 }
 
                 Spacer()
@@ -193,72 +86,338 @@ struct DashboardHeroCard: View {
                 CircularScoreView(score: summary.sleepScore)
             }
 
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [theme.accentColor.opacity(0.3), theme.secondaryAccent.opacity(0.3)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1)
+            Divider()
 
-            Grid(horizontalSpacing: 16, verticalSpacing: 16) {
-                GridRow {
-                    MetricTile(title: "Total Sleep", value: summary.formattedDuration, caption: "Goal 8h", icon: "bed.double.fill")
-                    MetricTile(title: "Snore Events", value: "\(summary.snoreEvents)", caption: "Filtered \(summary.filteredPercentage)%", icon: "waveform.path.ecg")
+            HStack(spacing: 16) {
+                QuickStat(icon: "bed.double.fill", title: "Duration", value: summary.formattedDuration, color: .blue)
+                QuickStat(icon: "moon.stars.fill", title: "Deep", value: "\(summary.deepSleepPercentage)%", color: .indigo)
+                QuickStat(icon: "sparkles", title: "REM", value: "\(summary.remSleepPercentage)%", color: .purple)
+            }
+        }
+        .padding(20)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+struct QuickStat: View {
+    let icon: String
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(color)
+
+            Text(value)
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Quick Actions Section
+
+struct QuickActionsSection: View {
+    @ObservedObject var audioRecorder: AudioRecorder
+    let onNavigate: (ContentView.Tab) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick Actions")
+                .font(.headline)
+                .padding(.horizontal, 4)
+
+            HStack(spacing: 12) {
+                // Start/Stop Recording
+                Button {
+                    if audioRecorder.isRecording {
+                        audioRecorder.stopRecording()
+                    } else {
+                        audioRecorder.startRecording()
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: audioRecorder.isRecording ? "stop.fill" : "moon.zzz.fill")
+                        Text(audioRecorder.isRecording ? "Stop" : "Sleep")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(audioRecorder.isRecording ? Color.orange : Color.blue)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
-                GridRow {
-                    MetricTile(title: "Deep Sleep", value: "\(summary.deepSleepPercentage)%", caption: "Target 25%", icon: "sparkles")
-                    MetricTile(title: "REM Sleep", value: "\(summary.remSleepPercentage)%", caption: "Target 20%", icon: "moon.stars.fill")
+                // Recordings
+                Button {
+                    onNavigate(.recordings)
+                } label: {
+                    HStack {
+                        Image(systemName: "waveform")
+                        Text("Recordings")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.appSecondaryBackground)
+                    .foregroundStyle(.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+
+                // Insights
+                Button {
+                    onNavigate(.analytics)
+                } label: {
+                    HStack {
+                        Image(systemName: "chart.bar.fill")
+                        Text("Insights")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.appSecondaryBackground)
+                    .foregroundStyle(.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
         }
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 28)
-                .fill(theme.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    theme.accentColor.opacity(0.25),
-                                    theme.secondaryAccent.opacity(0.15),
-                                    .clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+    }
+}
+
+// MARK: - Metrics Section
+
+struct MetricsSection: View {
+    let summary: DashboardData.SleepSummary
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var columns: [GridItem] {
+        [GridItem(.flexible()), GridItem(.flexible())]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Sleep Metrics")
+                .font(.headline)
+                .padding(.horizontal, 4)
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                MetricCard(
+                    icon: "bed.double.fill",
+                    title: "Total Sleep",
+                    value: summary.formattedDuration,
+                    subtitle: "Goal: 8h",
+                    color: .blue
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28)
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    theme.accentColor.opacity(0.3),
-                                    theme.secondaryAccent.opacity(0.15)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
+
+                MetricCard(
+                    icon: "waveform.path.ecg",
+                    title: "Snore Events",
+                    value: "\(summary.snoreEvents)",
+                    subtitle: "Filtered \(summary.filteredPercentage)%",
+                    color: .orange
                 )
-        )
-        .shadow(color: theme.accentColor.opacity(0.15), radius: 16, x: 0, y: 8)
-        .shadow(color: .black.opacity(0.25), radius: 24, x: 0, y: 12)
-        .scaleEffect(appeared ? 1.0 : 0.95)
-        .opacity(appeared ? 1.0 : 0.0)
-        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: appeared)
-        .animation(.easeInOut(duration: 0.3), value: theme)
-        .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                appeared = true
+
+                MetricCard(
+                    icon: "moon.stars.fill",
+                    title: "Deep Sleep",
+                    value: "\(summary.deepSleepPercentage)%",
+                    subtitle: "Target: 25%",
+                    color: .indigo
+                )
+
+                MetricCard(
+                    icon: "sparkles",
+                    title: "REM Sleep",
+                    value: "\(summary.remSleepPercentage)%",
+                    subtitle: "Target: 20%",
+                    color: .purple
+                )
             }
         }
+    }
+}
+
+struct MetricCard: View {
+    let icon: String
+    let title: String
+    let value: String
+    let subtitle: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                Spacer()
+            }
+
+            Text(value)
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Insights Section
+
+struct InsightsSection: View {
+    let insights: [DashboardData.Insight]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Insights")
+                .font(.headline)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 12) {
+                ForEach(insights.prefix(3)) { insight in
+                    InsightRow(insight: insight)
+                }
+            }
+        }
+    }
+}
+
+struct InsightRow: View {
+    let insight: DashboardData.Insight
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: insight.icon)
+                .font(.title3)
+                .foregroundStyle(insight.tint)
+                .frame(width: 36, height: 36)
+                .background(insight.tint.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(insight.title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                Text(insight.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(14)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Agent Section
+
+struct AgentSection: View {
+    let agents: [DashboardData.Agent]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("AI Agents")
+                    .font(.headline)
+
+                Spacer()
+
+                Text("\(agents.filter { $0.state == .running }.count)/\(agents.count) Active")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 4)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(agents) { agent in
+                        AgentCard(agent: agent)
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct AgentCard: View {
+    let agent: DashboardData.Agent
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: agent.icon)
+                    .foregroundStyle(agent.tint)
+
+                Spacer()
+
+                StatusIndicator(state: agent.state)
+            }
+
+            Text(agent.name)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .lineLimit(1)
+
+            Text(agent.description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .frame(width: 160)
+        .padding(14)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+struct StatusIndicator: View {
+    let state: DashboardData.Agent.State
+
+    var body: some View {
+        Circle()
+            .fill(state.color)
+            .frame(width: 8, height: 8)
+    }
+}
+
+// MARK: - Legacy Support Components
+
+struct DashboardHeroCard: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let summary: DashboardData.SleepSummary
+
+    var body: some View {
+        SleepScoreCard(summary: summary)
     }
 }
 
@@ -276,116 +435,26 @@ struct DashboardQuickNavigation: View {
     let destinations: [DashboardQuickDestination]
     let onSelect: (ContentView.Tab) -> Void
 
-    private var gridColumns: [GridItem] {
-        let columnCount = DeviceInfo.isIPad && horizontalSizeClass == .regular ? 4 : 2
-        return Array(repeating: GridItem(.flexible()), count: columnCount)
-    }
-
     var body: some View {
-        let theme = themeManager.selectedTheme
-
-        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 20 : 16) {
-            SectionHeader(
-                title: "Quick Navigation",
-                subtitle: "Open focused screens for deeper control"
-            )
-
-            LazyVGrid(columns: gridColumns, spacing: DeviceInfo.isIPad ? 20 : 16) {
-                ForEach(destinations) { destination in
-                    NavigationCardButton(
-                        destination: destination,
-                        theme: theme,
-                        onSelect: onSelect
-                    )
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            ForEach(destinations) { destination in
+                Button {
+                    onSelect(destination.tab)
+                } label: {
+                    HStack {
+                        Image(systemName: destination.icon)
+                            .foregroundStyle(.blue)
+                        Text(destination.title)
+                            .font(.subheadline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(14)
+                    .background(Color.appSecondaryBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
+                .buttonStyle(.plain)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: theme)
-    }
-}
-
-struct NavigationCardButton: View {
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    let destination: DashboardQuickDestination
-    let theme: AppTheme
-    let onSelect: (ContentView.Tab) -> Void
-
-    @State private var isPressed = false
-
-    var body: some View {
-        Button {
-            onSelect(destination.tab)
-        } label: {
-            VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 16 : 12) {
-                Image(systemName: destination.icon)
-                    .font(DeviceInfo.isIPad ? .title2 : .title3)
-                    .foregroundStyle(theme.accentColor)
-                    .padding(DeviceInfo.isIPad ? 16 : 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: DeviceInfo.isIPad ? 18 : 14)
-                            .fill(theme.accentColor.opacity(0.15))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DeviceInfo.isIPad ? 18 : 14)
-                                    .stroke(theme.accentColor.opacity(0.3), lineWidth: 1)
-                            )
-                    )
-
-                Spacer(minLength: 0)
-
-                VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 6 : 4) {
-                    Text(destination.title)
-                        .font(ResponsiveFont.headline(horizontalSizeClass))
-                        .foregroundStyle(theme.textPrimary)
-
-                    Text(destination.subtitle)
-                        .font(ResponsiveFont.caption(horizontalSizeClass))
-                        .foregroundStyle(theme.textSecondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: DeviceInfo.isIPad ? 160 : 130, alignment: .leading)
-            .padding(ResponsiveSpacing.cardPadding(horizontalSizeClass))
-            .background(
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(theme.cardBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        theme.accentColor.opacity(isPressed ? 0.15 : 0.05),
-                                        .clear
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22)
-                            .stroke(theme.accentColor.opacity(isPressed ? 0.25 : 0.1), lineWidth: 1)
-                    )
-            )
-            .shadow(color: .black.opacity(isPressed ? 0.1 : 0.25), radius: isPressed ? 6 : 14, x: 0, y: isPressed ? 3 : 8)
-            .scaleEffect(isPressed ? 0.97 : 1.0)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(destination.title)
-        .accessibilityHint(destination.subtitle)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        isPressed = true
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        isPressed = false
-                    }
-                }
-        )
     }
 }
 
@@ -394,90 +463,87 @@ struct DashboardSectionPicker: View {
     @Binding var selection: DashboardScreen.DashboardSection
 
     var body: some View {
-        let theme = themeManager.selectedTheme
-
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Focus Area")
-                .font(.headline)
-                .foregroundStyle(theme.textPrimary)
-
-            Picker("Focus Area", selection: $selection) {
-                ForEach(DashboardScreen.DashboardSection.allCases) { section in
-                    Text(section.title)
-                        .tag(section)
-                }
+        Picker("Section", selection: $selection) {
+            ForEach(DashboardScreen.DashboardSection.allCases) { section in
+                Text(section.title).tag(section)
             }
-            .pickerStyle(.segmented)
-
-            Text(selection.subtitle)
-                .font(.caption)
-                .foregroundStyle(theme.textSecondary)
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 22)
-                .fill(theme.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22)
-                        .stroke(theme.accentColor.opacity(0.12), lineWidth: 1)
-                )
-        )
-        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
-        .animation(.easeInOut(duration: 0.3), value: theme)
+        .pickerStyle(.segmented)
     }
 }
+
+extension DashboardScreen {
+    enum DashboardSection: String, CaseIterable, Identifiable {
+        case overview, insights, agents
+
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .overview: return "Overview"
+            case .insights: return "Insights"
+            case .agents: return "Agents"
+            }
+        }
+        var icon: String {
+            switch self {
+            case .overview: return "rectangle.grid.2x2"
+            case .insights: return "chart.bar.doc.horizontal"
+            case .agents: return "person.3.fill"
+            }
+        }
+        var subtitle: String {
+            switch self {
+            case .overview: return "Tonight at a glance"
+            case .insights: return "Trends & guidance"
+            case .agents: return "Agent network health"
+            }
+        }
+    }
+}
+
+// MARK: - Legacy Components (Simplified)
 
 struct AgentSnapshotCard: View {
     let agents: [DashboardData.Agent]
     let onManageAgents: () -> Void
 
-    private var activeCount: Int {
-        agents.filter { $0.state == .running }.count
-    }
-
-    private var syncingCount: Int {
-        agents.filter { $0.state == .syncing }.count
-    }
-
-    private var attentionCount: Int {
-        agents.filter { $0.state == .attention }.count
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Agent Coverage Overview")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                Spacer()
+            Text("Agent Status")
+                .font(.headline)
+
+            HStack(spacing: 20) {
+                StatView(title: "Active", value: "\(agents.filter { $0.state == .running }.count)", color: .green)
+                StatView(title: "Syncing", value: "\(agents.filter { $0.state == .syncing }.count)", color: .blue)
+                StatView(title: "Attention", value: "\(agents.filter { $0.state == .attention }.count)", color: .orange)
             }
 
-            HStack(spacing: 14) {
-                AgentSnapshotMetric(title: "Active", value: "\(activeCount)", icon: "sparkles", tint: .accentGreen)
-                AgentSnapshotMetric(title: "Syncing", value: "\(syncingCount)", icon: "arrow.triangle.2.circlepath", tint: .accentBlue)
-                AgentSnapshotMetric(title: "Attention", value: "\(attentionCount)", icon: "exclamationmark.triangle.fill", tint: .accentOrange)
-            }
-
-            Text("Manage agent behavior, notifications, and privacy controls in Settings when you need deeper adjustments.")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.7))
-
-            Button("Manage Agents in Settings") {
+            Button("Manage Agents") {
                 onManageAgents()
             }
             .buttonStyle(.borderedProminent)
-            .tint(.accentBlue.opacity(0.8))
         }
-        .padding(20)
-        .glassCard(
-            cornerRadius: 24,
-            tint: LinearGradient(
-                colors: [Color.white.opacity(0.05), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            shadowColor: .black.opacity(0.2)
-        )
+        .padding(16)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+struct StatView: View {
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -488,25 +554,7 @@ struct AgentSnapshotMetric: View {
     let tint: Color
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.headline)
-                .foregroundStyle(tint)
-
-            Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.7))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color.white.opacity(0.08))
-        )
+        StatView(title: title, value: value, color: tint)
     }
 }
 
@@ -514,13 +562,9 @@ struct HighlightGrid: View {
     let highlights: [DashboardData.Highlight]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Highlights", subtitle: "Agent-generated quick updates")
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 2), spacing: 16) {
-                ForEach(highlights) { highlight in
-                    HighlightCard(highlight: highlight)
-                }
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            ForEach(highlights) { highlight in
+                HighlightCard(highlight: highlight)
             }
         }
     }
@@ -530,39 +574,26 @@ struct HighlightCard: View {
     let highlight: DashboardData.Highlight
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: highlight.icon)
-                    .font(.title3)
                     .foregroundStyle(highlight.tint)
-                    .padding(12)
-                    .background(highlight.tint.opacity(0.18))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-
                 Spacer()
-
                 TrendBadge(trend: highlight.trend)
             }
 
             Text(highlight.title)
-                .font(.headline)
-                .foregroundStyle(.white)
+                .font(.subheadline)
+                .fontWeight(.medium)
 
             Text(highlight.caption)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.6))
-                .lineLimit(3)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
         }
-        .padding(20)
-        .glassCard(
-            cornerRadius: 22,
-            tint: LinearGradient(
-                colors: [highlight.tint.opacity(0.15), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            shadowColor: highlight.tint.opacity(0.2)
-        )
+        .padding(14)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -570,119 +601,62 @@ struct AgentStatusSection: View {
     let agents: [DashboardData.Agent]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(
-                title: "AI Agent Network",
-                subtitle: "Status across audio, sleep, health, and notifications"
-            )
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(agents) { agent in
-                        AgentCard(agent: agent)
-                    }
-                }
-                .padding(.horizontal, 2)
-            }
-        }
+        AgentSection(agents: agents)
     }
 }
 
-struct AgentCard: View {
-    let agent: DashboardData.Agent
+struct LiveSessionControl: View {
+    @ObservedObject var audioRecorder: AudioRecorder
+    var onStandByTrigger: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label {
-                Text(agent.name)
-                    .font(.headline)
-                    .foregroundStyle(.white)
-            } icon: {
-                Image(systemName: agent.icon)
-                    .foregroundStyle(agent.tint)
-            }
-            .labelStyle(.iconLeading)
-
-            Text(agent.description)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.6))
-                .lineLimit(3)
-
-            Spacer(minLength: 0)
-
-            HStack {
-                StatusPill(state: agent.state)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.4))
-            }
-        }
-        .frame(width: 220, height: 160)
-        .padding(20)
-        .glassCard(
-            cornerRadius: 24,
-            tint: LinearGradient(
-                colors: [agent.tint.opacity(0.2), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            shadowColor: agent.tint.opacity(0.25)
-        )
-    }
-}
-
-struct InsightsSection: View {
-    let insights: [DashboardData.Insight]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "AI Insights", subtitle: "Multi-agent guidance tuned to your sleep goals")
-
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(insights) { insight in
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 12) {
-                            Image(systemName: insight.icon)
-                                .font(.title3)
-                                .foregroundStyle(insight.tint)
-                                .frame(width: 36, height: 36)
-                                .background(insight.tint.opacity(0.18))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(insight.title)
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-
-                                Text(insight.detail)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white.opacity(0.7))
-                                    .lineLimit(3)
-                            }
-
-                            Spacer()
-                        }
-
-                        if let action = insight.action {
-                            Divider().background(.white.opacity(0.08))
-
-                            Button(action.label) { }
-                                .buttonStyle(.borderedProminent)
-                                .tint(insight.tint.opacity(0.8))
-                        }
-                    }
-                    .padding(18)
-                    .glassCard(
-                        cornerRadius: 22,
-                        tint: LinearGradient(
-                            colors: [insight.tint.opacity(0.15), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        shadowColor: insight.tint.opacity(0.2)
-                    )
+        VStack(spacing: 20) {
+            // Recording Button
+            Button {
+                if audioRecorder.isRecording {
+                    audioRecorder.stopRecording()
+                } else {
+                    audioRecorder.startRecording()
                 }
+            } label: {
+                VStack(spacing: 12) {
+                    Image(systemName: audioRecorder.isRecording ? "stop.circle.fill" : "record.circle.fill")
+                        .font(.system(size: 64))
+                        .foregroundStyle(audioRecorder.isRecording ? .orange : .green)
+
+                    Text(audioRecorder.isRecording ? "Stop Recording" : "Start Sleep Session")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
+                .background(Color.appSecondaryBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+
+            if audioRecorder.isRecording {
+                VStack(spacing: 12) {
+                    HStack {
+                        Label(audioRecorder.recordingDuration.formattedDurationDescription, systemImage: "clock")
+                        Spacer()
+                        Label("Recording", systemImage: "waveform")
+                            .foregroundStyle(.orange)
+                    }
+                    .font(.subheadline)
+
+                    if let standByTrigger = onStandByTrigger, DeviceInfo.isIPad {
+                        Button {
+                            standByTrigger()
+                        } label: {
+                            Label("Enter StandBy Mode", systemImage: "display")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .padding(16)
+                .background(Color.appSecondaryBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
         }
     }
@@ -692,39 +666,17 @@ struct TimelineSection: View {
     let events: [DashboardData.SleepEvent]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(
-                title: "Night Timeline",
-                subtitle: "Annotated by Audio Classification & StandBy Agents"
-            )
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Timeline")
+                .font(.headline)
 
-            VStack(alignment: .leading, spacing: 12) {
-                ProgressView(value: events.last?.progress ?? 1.0)
-                    .tint(.accentBlue)
-                    .background(
-                        Capsule()
-                            .fill(.white.opacity(0.1))
-                    )
-                    .frame(height: 6)
-                    .clipShape(Capsule())
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
-                        ForEach(events) { event in
-                            TimelineEventCard(event: event)
-                        }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(events) { event in
+                        TimelineEventCard(event: event)
                     }
                 }
             }
-            .padding(20)
-            .glassCard(
-                cornerRadius: 26,
-                tint: LinearGradient(
-                    colors: [.accentPurple.opacity(0.18), .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
         }
     }
 }
@@ -733,50 +685,23 @@ struct TimelineEventCard: View {
     let event: DashboardData.SleepEvent
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(event.timeLabel)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.65))
-                Spacer()
-                StatusPill(state: event.agentState)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text(event.timeLabel)
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             Text(event.title)
-                .font(.headline)
-                .foregroundStyle(.white)
+                .font(.subheadline)
+                .fontWeight(.medium)
 
             Text(event.description)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.65))
-                .lineLimit(3)
-
-            Spacer(minLength: 0)
-
-            HStack {
-                ForEach(0..<5) { index in
-                    Capsule()
-                        .fill(event.tint.opacity(index < event.intensity ? 0.8 : 0.25))
-                        .frame(width: 8, height: CGFloat(8 + index * 4))
-                }
-
-                Spacer()
-
-                Text(event.agentLabel)
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.5))
-            }
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
         }
-        .frame(width: 200, height: 160)
-        .padding(18)
-        .glassCard(
-            cornerRadius: 20,
-            tint: LinearGradient(
-                colors: [event.tint.opacity(0.22), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            shadowColor: event.tint.opacity(0.25)
-        )
+        .frame(width: 150)
+        .padding(12)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }

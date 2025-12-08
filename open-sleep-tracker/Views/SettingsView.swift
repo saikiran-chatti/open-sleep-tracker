@@ -2,7 +2,7 @@
 //  SettingsView.swift
 //  open-sleep-tracker
 //
-//  Created by AI Agent on 11/22/25.
+//  Apple-style Settings
 //
 
 import SwiftUI
@@ -19,137 +19,143 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppBackgroundView()
-
-                List {
-                    Section("Appearance") {
-                        NavigationLink {
-                            ThemeSelectionView()
-                        } label: {
-                            HStack {
-                                Label("Theme", systemImage: "paintpalette.fill")
-                                Spacer()
-                                HStack(spacing: 6) {
-                                    Image(systemName: themeManager.selectedTheme.icon)
-                                        .foregroundStyle(themeManager.selectedTheme.accentColor)
-                                    Text(themeManager.selectedTheme.rawValue)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-
-                    Section("Agents") {
-                        Toggle(isOn: $advancedMode) {
-                            Label("Advanced Agent Strategies", systemImage: "brain.head.profile")
-                        }
-
-                        NavigationLink {
-                            AgentDetailSettingsView()
-                        } label: {
-                            Label("Agent Configurations", systemImage: "slider.horizontal.2.square.on.square")
-                        }
-                    }
-
-                    Section("Notifications") {
-                        Toggle(isOn: $notificationsEnabled) {
-                            Label("Adaptive Notifications", systemImage: "bell.badge.waveform")
-                        }
-
-                        Toggle(isOn: $standbyWidgetsEnabled) {
-                            Label("StandBy Widgets", systemImage: "display")
-                        }
-                    }
-
-                    // StandBy Mode (iPad only)
-                    if DeviceInfo.isIPad {
-                        Section {
-                            NavigationLink {
-                                StandBySettingsView()
-                            } label: {
-                                HStack {
-                                    Label("StandBy Mode", systemImage: "display")
-                                    Spacer()
-                                    Text("iPad Only")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        } header: {
-                            Text("StandBy Mode")
-                        } footer: {
-                            Text("Optimize your iPad as a nightstand display during sleep tracking sessions")
-                        }
-                    }
-
-                    Section("Health & Privacy") {
-                        Toggle(isOn: $healthSyncEnabled) {
-                            Label("HealthKit Synchronization", systemImage: "heart.text.square")
-                        }
-
-                        NavigationLink {
-                            PrivacyCenterView()
-                        } label: {
-                            Label("Privacy Center", systemImage: "lock.shield")
-                        }
-                    }
-
-                    Section("Data Management") {
-                        NavigationLink {
-                            DataManagementView()
-                        } label: {
-                            Label("Storage & Export", systemImage: "externaldrive")
-                        }
-
-                        NavigationLink {
-                            CloudSyncView()
-                        } label: {
-                            Label("Cloud Sync", systemImage: "icloud")
-                        }
-                    }
-
-                    Section("Support") {
-                        NavigationLink {
-                            HelpView()
-                        } label: {
-                            Label("Help & Documentation", systemImage: "questionmark.circle")
-                        }
-
-                        NavigationLink {
-                            FeedbackView()
-                        } label: {
-                            Label("Feedback", systemImage: "bubble.left.and.bubble.right")
-                        }
-
-                        NavigationLink {
-                            AboutView()
-                        } label: {
-                            Label("About", systemImage: "info.circle")
-                        }
+            List {
+                Section {
+                    NavigationLink {
+                        AppearanceSettingsView()
+                    } label: {
+                        Label("Appearance", systemImage: "paintbrush")
                     }
                 }
-                .scrollContentBackground(.hidden)
+
+                Section("Sleep Tracking") {
+                    Toggle(isOn: $advancedMode) {
+                        Label("Advanced Analysis", systemImage: "brain.head.profile")
+                    }
+
+                    NavigationLink {
+                        AgentSettingsView()
+                    } label: {
+                        Label("AI Agents", systemImage: "cpu")
+                    }
+                }
+
+                Section("Notifications") {
+                    Toggle(isOn: $notificationsEnabled) {
+                        Label("Sleep Reminders", systemImage: "bell")
+                    }
+
+                    Toggle(isOn: $standbyWidgetsEnabled) {
+                        Label("Widget Updates", systemImage: "square.grid.2x2")
+                    }
+                }
+
+                if DeviceInfo.isIPad {
+                    Section {
+                        NavigationLink {
+                            StandBySettingsView()
+                        } label: {
+                            Label("StandBy Mode", systemImage: "display")
+                        }
+                    } footer: {
+                        Text("Use your iPad as a bedside display during sleep tracking")
+                    }
+                }
+
+                Section("Health") {
+                    Toggle(isOn: $healthSyncEnabled) {
+                        Label("HealthKit Sync", systemImage: "heart")
+                    }
+
+                    NavigationLink {
+                        PrivacySettingsView()
+                    } label: {
+                        Label("Privacy", systemImage: "hand.raised")
+                    }
+                }
+
+                Section("Data") {
+                    NavigationLink {
+                        StorageSettingsView()
+                    } label: {
+                        Label("Storage", systemImage: "internaldrive")
+                    }
+
+                    NavigationLink {
+                        CloudSettingsView()
+                    } label: {
+                        Label("iCloud Sync", systemImage: "icloud")
+                    }
+                }
+
+                Section("Support") {
+                    NavigationLink {
+                        HelpView()
+                    } label: {
+                        Label("Help", systemImage: "questionmark.circle")
+                    }
+
+                    NavigationLink {
+                        AboutView()
+                    } label: {
+                        Label("About", systemImage: "info.circle")
+                    }
+                }
             }
             .navigationTitle("Settings")
         }
     }
 }
 
-// MARK: - Agent Detail Settings
+// MARK: - Appearance Settings
 
-struct AgentDetailSettingsView: View {
+struct AppearanceSettingsView: View {
+    @EnvironmentObject var themeManager: ThemeManager
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(AppTheme.allCases) { theme in
+                    Button {
+                        themeManager.selectedTheme = theme
+                    } label: {
+                        HStack {
+                            Label(theme.rawValue, systemImage: theme.icon)
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            if themeManager.selectedTheme == theme {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Theme")
+            } footer: {
+                Text("Choose how the app appears. System matches your device settings.")
+            }
+        }
+        .navigationTitle("Appearance")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Agent Settings
+
+struct AgentSettingsView: View {
     @State private var audioSensitivity: Double = 0.65
     @State private var snoreThreshold: Double = 0.45
     @State private var patternLookback: Int = 14
     @State private var autoModelUpdates = true
     @State private var backgroundProcessing = true
-    @State private var intelligentNotifications = true
 
     var body: some View {
-        Form {
+        List {
             Section {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Sensitivity")
                         Spacer()
@@ -157,10 +163,9 @@ struct AgentDetailSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     Slider(value: $audioSensitivity, in: 0.2...1.0)
-                        .tint(.accentBlue)
                 }
 
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Snore Threshold")
                         Spacer()
@@ -168,20 +173,19 @@ struct AgentDetailSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     Slider(value: $snoreThreshold, in: 0.1...0.9)
-                        .tint(.accentOrange)
                 }
 
                 Toggle("Auto-update Models", isOn: $autoModelUpdates)
             } header: {
-                Label("Audio Classification Agent", systemImage: "waveform.circle.fill")
+                Label("Audio Classification", systemImage: "waveform")
             } footer: {
-                Text("Higher sensitivity detects more subtle sounds. Adjust threshold to filter false positives.")
+                Text("Higher sensitivity detects more subtle sounds")
             }
 
             Section {
                 Stepper(value: $patternLookback, in: 7...60, step: 7) {
                     HStack {
-                        Text("Historical Lookback")
+                        Text("History")
                         Spacer()
                         Text("\(patternLookback) days")
                             .foregroundStyle(.secondary)
@@ -190,372 +194,292 @@ struct AgentDetailSettingsView: View {
 
                 Toggle("Background Processing", isOn: $backgroundProcessing)
             } header: {
-                Label("Sleep Pattern Analysis Agent", systemImage: "chart.xyaxis.line")
-            } footer: {
-                Text("Longer lookback periods provide more accurate trend analysis but use more storage.")
-            }
-
-            Section {
-                Toggle("Smart Timing", isOn: $intelligentNotifications)
-
-                NavigationLink("Notification Schedule") {
-                    NotificationScheduleView()
-                }
-            } header: {
-                Label("Intelligent Notification Agent", systemImage: "bell.badge.waveform.fill")
-            } footer: {
-                Text("Smart timing learns your preferences and sends notifications at optimal times.")
-            }
-
-            Section {
-                NavigationLink("Health Data Sources") {
-                    HealthSourcesView()
-                }
-
-                NavigationLink("Sync Preferences") {
-                    SyncPreferencesView()
-                }
-            } header: {
-                Label("Health Integration Agent", systemImage: "heart.text.square")
-            }
-
-            Section {
-                NavigationLink("StandBy Appearance") {
-                    StandByAppearanceView()
-                }
-
-                NavigationLink("Widget Configuration") {
-                    WidgetConfigView()
-                }
-            } header: {
-                Label("StandBy Intelligence Agent", systemImage: "display")
+                Label("Sleep Analysis", systemImage: "chart.xyaxis.line")
             }
         }
-        .navigationTitle("Agent Configurations")
+        .navigationTitle("AI Agents")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-// MARK: - Privacy Center
+// MARK: - Privacy Settings
 
-struct PrivacyCenterView: View {
+struct PrivacySettingsView: View {
     var body: some View {
-        Form {
-            Section("Data Transparency") {
-                HStack {
-                    Label("On-device Processing", systemImage: "cpu")
-                    Spacer()
+        List {
+            Section("Data Processing") {
+                LabeledContent("On-device AI") {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.accentGreen)
+                        .foregroundStyle(.green)
                 }
 
-                HStack {
-                    Label("Secure Enclave Enabled", systemImage: "lock.shield")
-                    Spacer()
+                LabeledContent("Encryption") {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.accentGreen)
-                }
-
-                HStack {
-                    Label("Encrypted Cloud Sync", systemImage: "icloud.and.arrow.up")
-                    Spacer()
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.accentGreen)
+                        .foregroundStyle(.green)
                 }
             }
 
             Section("Permissions") {
-                HStack {
-                    Label("Health Data", systemImage: "heart.fill")
-                    Spacer()
-                    Text("Authorized")
-                        .foregroundStyle(.accentGreen)
-                }
-
-                HStack {
-                    Label("Microphone Access", systemImage: "mic.fill")
-                    Spacer()
+                LabeledContent("Microphone") {
                     Text("Granted")
-                        .foregroundStyle(.accentGreen)
+                        .foregroundStyle(.green)
                 }
 
-                HStack {
-                    Label("Notifications", systemImage: "bell.badge")
-                    Spacer()
-                    Text("Scheduled")
-                        .foregroundStyle(.accentBlue)
+                LabeledContent("Health Data") {
+                    Text("Authorized")
+                        .foregroundStyle(.green)
+                }
+
+                LabeledContent("Notifications") {
+                    Text("Enabled")
+                        .foregroundStyle(.blue)
                 }
             }
 
-            Section("Data Controls") {
-                Button("Export All Data") {
-                    // Export action
-                }
+            Section {
+                Button("Export My Data") { }
 
-                Button("Delete All Data", role: .destructive) {
-                    // Delete action
-                }
+                Button("Delete All Data", role: .destructive) { }
             }
         }
-        .navigationTitle("Privacy Center")
+        .navigationTitle("Privacy")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-// MARK: - Placeholder Views
+// MARK: - Storage Settings
 
-struct DataManagementView: View {
+struct StorageSettingsView: View {
     var body: some View {
-        Form {
-            Section("Storage") {
-                HStack {
-                    Text("Audio Recordings")
-                    Spacer()
-                    Text("245 MB")
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack {
-                    Text("Sleep Data")
-                    Spacer()
-                    Text("12 MB")
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack {
-                    Text("Analytics Cache")
-                    Spacer()
-                    Text("8 MB")
-                        .foregroundStyle(.secondary)
-                }
+        List {
+            Section("Usage") {
+                LabeledContent("Recordings", value: "245 MB")
+                LabeledContent("Sleep Data", value: "12 MB")
+                LabeledContent("Cache", value: "8 MB")
             }
 
             Section("Export") {
-                Button("Export to Health App") { }
+                Button("Export to Health") { }
                 Button("Export as CSV") { }
                 Button("Export as JSON") { }
             }
+
+            Section {
+                Button("Clear Cache") { }
+                Button("Delete Old Recordings", role: .destructive) { }
+            }
         }
-        .navigationTitle("Storage & Export")
+        .navigationTitle("Storage")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-struct CloudSyncView: View {
+// MARK: - Cloud Settings
+
+struct CloudSettingsView: View {
     @State private var iCloudEnabled = true
-    @State private var lastSynced = "2 minutes ago"
 
     var body: some View {
-        Form {
+        List {
             Section {
                 Toggle("iCloud Sync", isOn: $iCloudEnabled)
-
-                HStack {
-                    Text("Last Synced")
-                    Spacer()
-                    Text(lastSynced)
-                        .foregroundStyle(.secondary)
-                }
-
+                LabeledContent("Last Synced", value: "2 min ago")
                 Button("Sync Now") { }
             }
 
             Section("Sync Options") {
-                Toggle("Audio Recordings", isOn: .constant(true))
-                Toggle("Sleep Analytics", isOn: .constant(true))
-                Toggle("Agent Configurations", isOn: .constant(true))
+                Toggle("Recordings", isOn: .constant(true))
+                Toggle("Sleep Data", isOn: .constant(true))
+                Toggle("Settings", isOn: .constant(true))
             }
         }
-        .navigationTitle("Cloud Sync")
+        .navigationTitle("iCloud")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+// MARK: - Help View
 
 struct HelpView: View {
     var body: some View {
         List {
             Section("Getting Started") {
-                NavigationLink("How to Start a Sleep Session") { Text("Guide content") }
-                NavigationLink("Understanding Your Sleep Score") { Text("Guide content") }
-                NavigationLink("Configuring AI Agents") { Text("Guide content") }
-            }
-
-            Section("Features") {
-                NavigationLink("Audio Classification") { Text("Feature info") }
-                NavigationLink("Sleep Pattern Analysis") { Text("Feature info") }
-                NavigationLink("Health Integration") { Text("Feature info") }
+                NavigationLink("Start a Sleep Session") {
+                    HelpDetailView(title: "Sleep Sessions", content: "Tap the moon button to begin tracking your sleep.")
+                }
+                NavigationLink("Understanding Sleep Scores") {
+                    HelpDetailView(title: "Sleep Scores", content: "Your score is based on duration, quality, and patterns.")
+                }
             }
 
             Section("Troubleshooting") {
-                NavigationLink("Audio Not Recording") { Text("Troubleshooting") }
-                NavigationLink("HealthKit Sync Issues") { Text("Troubleshooting") }
-                NavigationLink("Notification Problems") { Text("Troubleshooting") }
+                NavigationLink("Audio Issues") {
+                    HelpDetailView(title: "Audio", content: "Make sure microphone permissions are enabled.")
+                }
+                NavigationLink("Sync Problems") {
+                    HelpDetailView(title: "Sync", content: "Check your internet connection and iCloud settings.")
+                }
+            }
+
+            Section {
+                Link("Contact Support", destination: URL(string: "mailto:support@example.com")!)
             }
         }
-        .navigationTitle("Help & Documentation")
+        .navigationTitle("Help")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-struct FeedbackView: View {
-    @State private var feedbackText = ""
-    @State private var feedbackType = "Bug Report"
-    let feedbackTypes = ["Bug Report", "Feature Request", "General Feedback"]
+struct HelpDetailView: View {
+    let title: String
+    let content: String
 
     var body: some View {
-        Form {
-            Section {
-                Picker("Type", selection: $feedbackType) {
-                    ForEach(feedbackTypes, id: \.self) { type in
-                        Text(type).tag(type)
-                    }
-                }
-
-                TextEditor(text: $feedbackText)
-                    .frame(minHeight: 150)
-            }
-
-            Section {
-                Button("Submit Feedback") { }
-                    .frame(maxWidth: .infinity)
-            }
+        ScrollView {
+            Text(content)
+                .padding()
         }
-        .navigationTitle("Feedback")
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+// MARK: - About View
 
 struct AboutView: View {
     var body: some View {
-        Form {
+        List {
             Section {
-                HStack {
-                    Text("Version")
-                    Spacer()
-                    Text("1.0.0")
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack {
-                    Text("Build")
-                    Spacer()
-                    Text("2025.11.22")
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Section("AI Agents") {
-                Text("This app uses 6 specialized AI agents to provide intelligent sleep tracking and analysis.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                LabeledContent("Version", value: "1.0.0")
+                LabeledContent("Build", value: "2025.12")
             }
 
             Section {
                 Link("Privacy Policy", destination: URL(string: "https://example.com/privacy")!)
                 Link("Terms of Service", destination: URL(string: "https://example.com/terms")!)
             }
+
+            Section {
+                Text("Sleep Tracker uses on-device AI to analyze your sleep patterns and provide personalized insights.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
         .navigationTitle("About")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-// MARK: - Additional Placeholder Views
+// MARK: - StandBy Settings
 
-struct NotificationScheduleView: View {
+struct StandBySettingsView: View {
+    @StateObject private var settings = StandBySettings()
+
     var body: some View {
-        Form {
-            Section("Bedtime Reminders") {
-                Toggle("Wind-down Reminder", isOn: .constant(true))
-                DatePicker("Time", selection: .constant(Date()), displayedComponents: .hourAndMinute)
-            }
-
-            Section("Morning Reports") {
-                Toggle("Daily Sleep Report", isOn: .constant(true))
-                DatePicker("Time", selection: .constant(Date()), displayedComponents: .hourAndMinute)
-            }
-        }
-        .navigationTitle("Notification Schedule")
-    }
-}
-
-struct HealthSourcesView: View {
-    var body: some View {
-        Form {
+        List {
             Section {
-                Toggle("Apple Watch", isOn: .constant(true))
-                Toggle("iPhone Motion", isOn: .constant(true))
-                Toggle("Heart Rate", isOn: .constant(true))
-                Toggle("Respiratory Rate", isOn: .constant(true))
+                Toggle("Auto-Activate", isOn: $settings.autoActivate)
+                Toggle("Keep Screen On", isOn: $settings.keepScreenOn)
+            } header: {
+                Text("Behavior")
+            } footer: {
+                Text("Auto-activate enters StandBy when recording starts")
             }
-        }
-        .navigationTitle("Health Data Sources")
-    }
-}
 
-struct SyncPreferencesView: View {
-    var body: some View {
-        Form {
             Section {
-                Toggle("Background Sync", isOn: .constant(true))
-                Toggle("WiFi Only", isOn: .constant(false))
-            }
-        }
-        .navigationTitle("Sync Preferences")
-    }
-}
+                Toggle("Night Mode (Red Tint)", isOn: $settings.redTintEnabled)
+                Toggle("Auto-Dim", isOn: $settings.autoDimEnabled)
 
-struct StandByAppearanceView: View {
-    var body: some View {
-        Form {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Brightness")
+                        Spacer()
+                        Text("\(Int(settings.brightness * 100))%")
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $settings.brightness, in: 0.1...1.0)
+                }
+            } header: {
+                Text("Display")
+            }
+
             Section {
-                Toggle("Auto Brightness", isOn: .constant(true))
-                Toggle("Night Mode", isOn: .constant(true))
+                NavigationLink("Pages") {
+                    PageSettingsView(settings: settings)
+                }
+                NavigationLink("Widgets") {
+                    WidgetSettingsView(settings: settings)
+                }
+            } header: {
+                Text("Content")
             }
         }
-        .navigationTitle("StandBy Appearance")
+        .navigationTitle("StandBy")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-struct WidgetConfigView: View {
+struct PageSettingsView: View {
+    @ObservedObject var settings: StandBySettings
+
     var body: some View {
-        Form {
-            Section {
-                Toggle("Sleep Score", isOn: .constant(true))
-                Toggle("Recording Status", isOn: .constant(true))
-                Toggle("Next Alarm", isOn: .constant(true))
+        List {
+            ForEach(StandBySettings.StandByPage.allCases) { page in
+                Toggle(isOn: Binding(
+                    get: { settings.enabledPages.contains(page) },
+                    set: { enabled in
+                        if enabled {
+                            if !settings.enabledPages.contains(page) {
+                                settings.enabledPages.append(page)
+                            }
+                        } else {
+                            settings.enabledPages.removeAll { $0 == page }
+                        }
+                    }
+                )) {
+                    Label(page.rawValue, systemImage: page.icon)
+                }
             }
         }
-        .navigationTitle("Widget Configuration")
+        .navigationTitle("Pages")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-// MARK: - Theme Selection View
+struct WidgetSettingsView: View {
+    @ObservedObject var settings: StandBySettings
+
+    var body: some View {
+        List {
+            ForEach(StandBySettings.WidgetType.allCases) { widget in
+                Toggle(isOn: Binding(
+                    get: { settings.enabledWidgets.contains(widget) },
+                    set: { enabled in
+                        if enabled {
+                            if !settings.enabledWidgets.contains(widget) {
+                                settings.enabledWidgets.append(widget)
+                            }
+                        } else {
+                            settings.enabledWidgets.removeAll { $0 == widget }
+                        }
+                    }
+                )) {
+                    Label(widget.rawValue, systemImage: widget.icon)
+                }
+            }
+        }
+        .navigationTitle("Widgets")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Legacy Support
 
 struct ThemeSelectionView: View {
     @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
-        ZStack {
-            AppBackgroundView()
-
-            List {
-                Section("Solid Themes") {
-                    ForEach(AppTheme.solidThemes) { theme in
-                        ThemeRow(theme: theme, isSelected: themeManager.selectedTheme == theme) {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                themeManager.selectedTheme = theme
-                            }
-                        }
-                    }
-                }
-
-                Section("Gradient Themes") {
-                    ForEach(AppTheme.gradientThemes) { theme in
-                        ThemeRow(theme: theme, isSelected: themeManager.selectedTheme == theme) {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                themeManager.selectedTheme = theme
-                            }
-                        }
-                    }
-                }
-            }
-            .scrollContentBackground(.hidden)
-        }
-        .navigationTitle("Theme")
+        AppearanceSettingsView()
     }
 }
 
@@ -566,261 +490,134 @@ struct ThemeRow: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 16) {
-                // Theme preview
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(
-                        theme.colors.count == 1
-                            ? AnyShapeStyle(theme.colors[0])
-                            : AnyShapeStyle(LinearGradient(
-                                colors: theme.colors,
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                    )
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(theme.accentColor.opacity(0.5), lineWidth: 1)
-                    )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Image(systemName: theme.icon)
-                            .foregroundStyle(theme.accentColor)
-                            .font(.footnote)
-                        Text(theme.rawValue)
-                            .foregroundStyle(.primary)
-                    }
-
-                    Text(theme.isGradient ? "Gradient" : "Solid")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
+            HStack {
+                Label(theme.rawValue, systemImage: theme.icon)
                 Spacer()
-
                 if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.accentBlue)
-                        .font(.title3)
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(.blue)
                 }
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
     }
 }
 
-// MARK: - StandBy Mode Settings
+struct AgentDetailSettingsView: View {
+    var body: some View {
+        AgentSettingsView()
+    }
+}
 
-struct StandBySettingsView: View {
-    @StateObject private var settings = StandBySettings()
+struct PrivacyCenterView: View {
+    var body: some View {
+        PrivacySettingsView()
+    }
+}
+
+struct DataManagementView: View {
+    var body: some View {
+        StorageSettingsView()
+    }
+}
+
+struct CloudSyncView: View {
+    var body: some View {
+        CloudSettingsView()
+    }
+}
+
+struct FeedbackView: View {
+    @State private var feedbackText = ""
 
     var body: some View {
         Form {
             Section {
-                Toggle("Auto-Activate During Recording", isOn: $settings.autoActivate)
-                Toggle("Show Seconds on Clock", isOn: $settings.showSeconds)
-                Toggle("Keep Screen On", isOn: $settings.keepScreenOn)
-            } header: {
-                Label("Behavior", systemImage: "gearshape")
-            } footer: {
-                Text("Auto-activate will automatically enter StandBy Mode when you start recording on iPad")
+                TextEditor(text: $feedbackText)
+                    .frame(minHeight: 150)
             }
 
             Section {
-                Toggle("Red Tint (Night Mode)", isOn: $settings.redTintEnabled)
-                Toggle("Auto-Dim After 30 Seconds", isOn: $settings.autoDimEnabled)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Default Brightness")
-                        Spacer()
-                        Text("\(Int(settings.brightness * 100))%")
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: $settings.brightness, in: 0.1...1.0)
-                        .tint(.accentBlue)
-                }
-            } header: {
-                Label("Display", systemImage: "sun.max")
-            } footer: {
-                Text("Red tint reduces blue light for better sleep. Screen will dim after 30 seconds of inactivity.")
-            }
-
-            Section {
-                NavigationLink {
-                    PageCustomizationView(settings: settings)
-                } label: {
-                    HStack {
-                        Label("Enabled Pages", systemImage: "square.grid.2x2")
-                        Spacer()
-                        Text("\(settings.enabledPages.count)")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                NavigationLink {
-                    WidgetCustomizationView(settings: settings)
-                } label: {
-                    HStack {
-                        Label("Enabled Widgets", systemImage: "square.grid.3x3")
-                        Spacer()
-                        Text("\(settings.enabledWidgets.count)")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            } header: {
-                Label("Content", systemImage: "rectangle.split.2x1")
-            } footer: {
-                Text("Swipe between pages and customize which widgets appear in your StandBy Mode")
-            }
-
-            Section {
-                Picker("Background Style", selection: $settings.backgroundStyle) {
-                    ForEach(StandBySettings.BackgroundStyle.allCases) { style in
-                        HStack {
-                            Image(systemName: style.icon)
-                            Text(style.rawValue)
-                        }
-                        .tag(style)
-                    }
-                }
-
-                Text(settings.backgroundStyle.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 8)
-            } header: {
-                Label("Background", systemImage: "photo")
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "hand.tap")
-                            .foregroundStyle(.accentBlue)
-                        Text("Single Tap")
-                        Spacer()
-                        Text("Wake Display")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack {
-                        Image(systemName: "hand.point.up.left")
-                            .foregroundStyle(.accentPurple)
-                        Text("Long Press")
-                        Spacer()
-                        Text("Show Controls")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack {
-                        Image(systemName: "hand.draw")
-                            .foregroundStyle(.accentTeal)
-                        Text("Swipe Left/Right")
-                        Spacer()
-                        Text("Switch Pages")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .font(.subheadline)
-            } header: {
-                Label("Gestures", systemImage: "hand.raised")
+                Button("Submit") { }
+                    .frame(maxWidth: .infinity)
             }
         }
-        .navigationTitle("StandBy Mode")
+        .navigationTitle("Feedback")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-// MARK: - Page Customization View
+struct NotificationScheduleView: View {
+    var body: some View {
+        List {
+            Section("Bedtime") {
+                Toggle("Wind-down Reminder", isOn: .constant(true))
+            }
+
+            Section("Morning") {
+                Toggle("Daily Report", isOn: .constant(true))
+            }
+        }
+        .navigationTitle("Notifications")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct HealthSourcesView: View {
+    var body: some View {
+        List {
+            Toggle("Apple Watch", isOn: .constant(true))
+            Toggle("Heart Rate", isOn: .constant(true))
+        }
+        .navigationTitle("Health Sources")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct SyncPreferencesView: View {
+    var body: some View {
+        List {
+            Toggle("Background Sync", isOn: .constant(true))
+            Toggle("WiFi Only", isOn: .constant(false))
+        }
+        .navigationTitle("Sync")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct StandByAppearanceView: View {
+    var body: some View {
+        List {
+            Toggle("Auto Brightness", isOn: .constant(true))
+            Toggle("Night Mode", isOn: .constant(true))
+        }
+        .navigationTitle("Appearance")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct WidgetConfigView: View {
+    var body: some View {
+        List {
+            Toggle("Sleep Score", isOn: .constant(true))
+            Toggle("Recording Status", isOn: .constant(true))
+        }
+        .navigationTitle("Widgets")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
 
 struct PageCustomizationView: View {
     @ObservedObject var settings: StandBySettings
 
     var body: some View {
-        Form {
-            Section {
-                ForEach(StandBySettings.StandByPage.allCases) { page in
-                    Toggle(isOn: Binding(
-                        get: { settings.enabledPages.contains(page) },
-                        set: { isEnabled in
-                            if isEnabled {
-                                if !settings.enabledPages.contains(page) {
-                                    settings.enabledPages.append(page)
-                                }
-                            } else {
-                                settings.enabledPages.removeAll { $0 == page }
-                            }
-                        }
-                    )) {
-                        HStack {
-                            Image(systemName: page.icon)
-                                .foregroundStyle(.accentBlue)
-                                .frame(width: 28)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(page.rawValue)
-                                    .font(.subheadline)
-                                Text(page.description)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-            } header: {
-                Text("Available Pages")
-            } footer: {
-                Text("Select which pages appear in your StandBy Mode. Swipe left or right to navigate between enabled pages.")
-            }
-        }
-        .navigationTitle("Enabled Pages")
+        PageSettingsView(settings: settings)
     }
 }
-
-// MARK: - Widget Customization View
 
 struct WidgetCustomizationView: View {
     @ObservedObject var settings: StandBySettings
 
     var body: some View {
-        Form {
-            Section {
-                ForEach(StandBySettings.WidgetType.allCases) { widget in
-                    Toggle(isOn: Binding(
-                        get: { settings.enabledWidgets.contains(widget) },
-                        set: { isEnabled in
-                            if isEnabled {
-                                if !settings.enabledWidgets.contains(widget) {
-                                    settings.enabledWidgets.append(widget)
-                                }
-                            } else {
-                                settings.enabledWidgets.removeAll { $0 == widget }
-                            }
-                        }
-                    )) {
-                        HStack {
-                            Image(systemName: widget.icon)
-                                .foregroundStyle(.accentPurple)
-                                .frame(width: 28)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(widget.rawValue)
-                                    .font(.subheadline)
-                                Text(widget.description)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-            } header: {
-                Text("Available Widgets")
-            } footer: {
-                Text("Select which widgets appear on the Widgets page in StandBy Mode. Widgets display real-time sleep tracking data.")
-            }
-        }
-        .navigationTitle("Enabled Widgets")
+        WidgetSettingsView(settings: settings)
     }
 }
-
