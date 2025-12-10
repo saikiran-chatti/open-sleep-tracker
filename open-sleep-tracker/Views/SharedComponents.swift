@@ -2,175 +2,93 @@
 //  SharedComponents.swift
 //  open-sleep-tracker
 //
-//  Created by AI Agent on 11/22/25.
+//  Apple-style minimalist design system
 //
 
 import SwiftUI
 import Combine
 
-// MARK: - Theme System
+// MARK: - Color System (Apple-style)
+
+extension Color {
+    // Primary accent - iOS blue
+    static let appAccent = Color.blue
+
+    // Semantic colors
+    static let appGreen = Color.green
+    static let appOrange = Color.orange
+    static let appRed = Color.red
+    static let appPurple = Color.purple
+    static let appTeal = Color.teal
+    static let appIndigo = Color.indigo
+
+    // Background colors
+    static let appBackground = Color(uiColor: .systemBackground)
+    static let appSecondaryBackground = Color(uiColor: .secondarySystemBackground)
+    static let appTertiaryBackground = Color(uiColor: .tertiarySystemBackground)
+    static let appGroupedBackground = Color(uiColor: .systemGroupedBackground)
+
+    // Text colors
+    static let appPrimaryText = Color(uiColor: .label)
+    static let appSecondaryText = Color(uiColor: .secondaryLabel)
+    static let appTertiaryText = Color(uiColor: .tertiaryLabel)
+
+    // Separator
+    static let appSeparator = Color(uiColor: .separator)
+
+    // Legacy support for existing code
+    static let accentBlue = Color.blue
+    static let accentPurple = Color.purple
+    static let accentGreen = Color.green
+    static let accentOrange = Color.orange
+    static let accentTeal = Color.teal
+}
+
+extension ShapeStyle where Self == Color {
+    static var accentBlue: Color { Color.blue }
+    static var accentPurple: Color { Color.purple }
+    static var accentGreen: Color { Color.green }
+    static var accentOrange: Color { Color.orange }
+    static var accentTeal: Color { Color.teal }
+}
+
+// MARK: - Theme System (Simplified)
 
 enum AppTheme: String, CaseIterable, Identifiable {
-    // Solid Themes
-    case pitchBlack = "Pitch Black"
-    case midnight = "Midnight"
-    case ocean = "Ocean"
-    case forest = "Forest"
-    case charcoal = "Charcoal"
-
-    // Gradient Themes
-    case aurora = "Aurora"
-    case sunset = "Sunset"
-    case cosmos = "Cosmos"
-    case lavender = "Lavender"
+    case system = "System"
+    case dark = "Dark"
+    case light = "Light"
 
     var id: String { rawValue }
 
-    var isGradient: Bool {
+    var colorScheme: ColorScheme? {
         switch self {
-        case .aurora, .sunset, .cosmos, .lavender:
-            return true
-        default:
-            return false
+        case .system: return nil
+        case .dark: return .dark
+        case .light: return .light
         }
-    }
-
-    static var solidThemes: [AppTheme] {
-        [.pitchBlack, .midnight, .ocean, .forest, .charcoal]
-    }
-
-    static var gradientThemes: [AppTheme] {
-        [.aurora, .sunset, .cosmos, .lavender]
-    }
-
-    var colors: [Color] {
-        switch self {
-        // Solid Themes
-        case .pitchBlack:
-            return [Color.black]
-        case .midnight:
-            return [Color(red: 0.08, green: 0.09, blue: 0.14)]
-        case .ocean:
-            return [Color(red: 0.06, green: 0.12, blue: 0.18)]
-        case .forest:
-            return [Color(red: 0.08, green: 0.14, blue: 0.10)]
-        case .charcoal:
-            return [Color(red: 0.10, green: 0.10, blue: 0.12)]
-
-        // Gradient Themes
-        case .aurora:
-            return [
-                Color(red: 0.12, green: 0.14, blue: 0.24),
-                Color(red: 0.09, green: 0.11, blue: 0.23),
-                Color(red: 0.06, green: 0.08, blue: 0.18)
-            ]
-        case .sunset:
-            return [
-                Color(red: 0.18, green: 0.10, blue: 0.14),
-                Color(red: 0.14, green: 0.08, blue: 0.12),
-                Color(red: 0.10, green: 0.06, blue: 0.10)
-            ]
-        case .cosmos:
-            return [
-                Color(red: 0.10, green: 0.08, blue: 0.18),
-                Color(red: 0.08, green: 0.06, blue: 0.16),
-                Color(red: 0.06, green: 0.04, blue: 0.12)
-            ]
-        case .lavender:
-            return [
-                Color(red: 0.14, green: 0.10, blue: 0.18),
-                Color(red: 0.12, green: 0.08, blue: 0.16),
-                Color(red: 0.08, green: 0.06, blue: 0.12)
-            ]
-        }
-    }
-
-    var accentColor: Color {
-        switch self {
-        case .pitchBlack:
-            return .white
-        case .midnight, .aurora, .cosmos:
-            return .accentBlue
-        case .ocean:
-            return .accentTeal
-        case .forest:
-            return .accentGreen
-        case .charcoal:
-            return .white.opacity(0.8)
-        case .sunset:
-            return .accentOrange
-        case .lavender:
-            return .accentPurple
-        }
-    }
-
-    var secondaryAccent: Color {
-        switch self {
-        case .pitchBlack, .charcoal:
-            return .accentBlue
-        case .midnight, .aurora:
-            return .accentPurple
-        case .ocean:
-            return .accentBlue
-        case .forest:
-            return .accentTeal
-        case .cosmos:
-            return .accentPurple
-        case .sunset:
-            return .accentPurple
-        case .lavender:
-            return .accentTeal
-        }
-    }
-
-    var cardBackground: Color {
-        switch self {
-        case .pitchBlack:
-            return Color.white.opacity(0.06)
-        case .midnight:
-            return Color(red: 0.12, green: 0.13, blue: 0.20)
-        case .ocean:
-            return Color(red: 0.10, green: 0.16, blue: 0.24)
-        case .forest:
-            return Color(red: 0.12, green: 0.18, blue: 0.14)
-        case .charcoal:
-            return Color(red: 0.14, green: 0.14, blue: 0.16)
-        case .aurora:
-            return Color(red: 0.16, green: 0.18, blue: 0.28)
-        case .sunset:
-            return Color(red: 0.22, green: 0.14, blue: 0.18)
-        case .cosmos:
-            return Color(red: 0.14, green: 0.12, blue: 0.22)
-        case .lavender:
-            return Color(red: 0.18, green: 0.14, blue: 0.22)
-        }
-    }
-
-    var textPrimary: Color {
-        .white
-    }
-
-    var textSecondary: Color {
-        .white.opacity(0.7)
-    }
-
-    var textTertiary: Color {
-        .white.opacity(0.5)
     }
 
     var icon: String {
         switch self {
-        case .pitchBlack: return "circle.slash"
-        case .midnight: return "moon.fill"
-        case .ocean: return "water.waves"
-        case .forest: return "leaf.fill"
-        case .charcoal: return "circle.fill"
-        case .aurora: return "sparkles"
-        case .sunset: return "sun.horizon.fill"
-        case .cosmos: return "star.fill"
-        case .lavender: return "flower.fill"
+        case .system: return "circle.lefthalf.filled"
+        case .dark: return "moon.fill"
+        case .light: return "sun.max.fill"
         }
     }
+
+    // Legacy support
+    var accentColor: Color { .appAccent }
+    var secondaryAccent: Color { .appPurple }
+    var cardBackground: Color { .appSecondaryBackground }
+    var textPrimary: Color { .appPrimaryText }
+    var textSecondary: Color { .appSecondaryText }
+    var textTertiary: Color { .appTertiaryText }
+    var isGradient: Bool { false }
+    var colors: [Color] { [.appBackground] }
+
+    static var solidThemes: [AppTheme] { allCases }
+    static var gradientThemes: [AppTheme] { [] }
 }
 
 class ThemeManager: ObservableObject {
@@ -181,149 +99,101 @@ class ThemeManager: ObservableObject {
     }
 
     init() {
-        let savedTheme = UserDefaults.standard.string(forKey: "selectedTheme") ?? AppTheme.aurora.rawValue
-        self.selectedTheme = AppTheme(rawValue: savedTheme) ?? .aurora
+        let savedTheme = UserDefaults.standard.string(forKey: "selectedTheme") ?? AppTheme.system.rawValue
+        self.selectedTheme = AppTheme(rawValue: savedTheme) ?? .system
     }
 }
 
 // MARK: - Section Header
 
 struct SectionHeader: View {
-    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let title: String
     let subtitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 8 : 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(ResponsiveFont.title3(horizontalSizeClass))
-                .fontWeight(.bold)
-                .foregroundStyle(themeManager.selectedTheme.textPrimary)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
 
             Text(subtitle)
-                .font(ResponsiveFont.caption(horizontalSizeClass))
-                .foregroundStyle(themeManager.selectedTheme.textSecondary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
     }
 }
 
-// MARK: - Metric Components
+// MARK: - Metric Tile (Apple Health Style)
 
 struct MetricTile: View {
-    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let title: String
     let value: String
     let caption: String
     let icon: String
-
-    @State private var appeared = false
+    var tint: Color = .appAccent
 
     var body: some View {
-        let theme = themeManager.selectedTheme
-
-        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 10 : 8) {
-            HStack(spacing: DeviceInfo.isIPad ? 10 : 8) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(ResponsiveFont.caption(horizontalSizeClass))
-                    .foregroundStyle(theme.accentColor)
+                    .font(.subheadline)
+                    .foregroundStyle(tint)
 
                 Text(title)
-                    .font(ResponsiveFont.caption(horizontalSizeClass))
-                    .fontWeight(.medium)
-                    .foregroundStyle(theme.textSecondary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
 
             Text(value)
-                .font(DeviceInfo.isIPad ? .system(size: 28, weight: .bold, design: .rounded) : .system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(theme.textPrimary)
+                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
                 .contentTransition(.numericText())
 
             Text(caption)
-                .font(ResponsiveFont.caption(horizontalSizeClass))
-                .foregroundStyle(theme.textTertiary)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DeviceInfo.isIPad ? 20 : 18)
-        .background(
-            RoundedRectangle(cornerRadius: 22)
-                .fill(theme.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    theme.accentColor.opacity(0.08),
-                                    .clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22)
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    theme.accentColor.opacity(0.2),
-                                    theme.accentColor.opacity(0.05)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-        )
-        .shadow(color: theme.accentColor.opacity(0.1), radius: 8, x: 0, y: 4)
-        .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 6)
-        .scaleEffect(appeared ? 1.0 : 0.95)
-        .opacity(appeared ? 1.0 : 0.0)
-        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: appeared)
-        .animation(.easeInOut(duration: 0.3), value: theme)
-        .onAppear {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.1)) {
-                appeared = true
-            }
-        }
+        .padding(16)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
+// MARK: - Metric Pill (Compact)
+
 struct MetricPill: View {
-    @EnvironmentObject var themeManager: ThemeManager
     let title: String
     let value: String
     let icon: String
-    var tint: Color = .accentBlue
+    var tint: Color = .appAccent
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label(title, systemImage: icon)
-                .font(.caption2)
-                .foregroundStyle(themeManager.selectedTheme.textSecondary)
-                .labelStyle(.iconLeading)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                Text(title)
+                    .font(.caption2)
+            }
+            .foregroundStyle(.secondary)
 
             Text(value)
-                .font(.headline)
-                .foregroundStyle(themeManager.selectedTheme.textPrimary)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(.primary)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            Capsule()
-                .fill(tint.opacity(0.16))
-        )
-        .overlay(
-            Capsule()
-                .stroke(tint.opacity(0.35), lineWidth: 1)
-        )
-        .animation(.easeInOut(duration: 0.3), value: themeManager.selectedTheme)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(tint.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
-// MARK: - Badge & Status Components
+// MARK: - Badge View
 
 struct BadgeView: View {
     let text: String
@@ -331,20 +201,18 @@ struct BadgeView: View {
     let color: Color
 
     var body: some View {
-        Label {
-            Text(text)
-                .font(.caption2)
-                .fontWeight(.semibold)
-        } icon: {
-            Image(systemName: icon)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(color.opacity(0.2))
-        .clipShape(Capsule())
-        .foregroundStyle(color)
+        Label(text, systemImage: icon)
+            .font(.caption2)
+            .fontWeight(.medium)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.15))
+            .foregroundStyle(color)
+            .clipShape(Capsule())
     }
 }
+
+// MARK: - Trend Badge
 
 struct TrendBadge: View {
     let trend: DashboardData.Trend
@@ -352,14 +220,16 @@ struct TrendBadge: View {
     var body: some View {
         switch trend {
         case .up(let value):
-            BadgeView(text: "+\(value)%", icon: "arrow.up.right", color: .accentGreen)
+            BadgeView(text: "+\(value)%", icon: "arrow.up.right", color: .appGreen)
         case .down(let value):
-            BadgeView(text: "-\(value)%", icon: "arrow.down.right", color: .accentOrange)
+            BadgeView(text: "-\(value)%", icon: "arrow.down.right", color: .appOrange)
         case .steady:
-            BadgeView(text: "Stable", icon: "equal", color: .accentTeal)
+            BadgeView(text: "Stable", icon: "equal", color: .appTeal)
         }
     }
 }
+
+// MARK: - Status Pill
 
 struct StatusPill: View {
     let state: DashboardData.Agent.State
@@ -367,191 +237,122 @@ struct StatusPill: View {
     var body: some View {
         Label(state.label, systemImage: state.icon)
             .font(.caption2)
-            .fontWeight(.semibold)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(state.color.opacity(0.2))
+            .fontWeight(.medium)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(state.color.opacity(0.15))
             .foregroundStyle(state.color)
             .clipShape(Capsule())
     }
 }
 
-// MARK: - Circular Score View
+// MARK: - Circular Score View (Apple Watch Style)
 
 struct CircularScoreView: View {
-    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let score: Int
     @State private var animatedScore: CGFloat = 0
 
     private var circleSize: CGFloat {
-        DeviceInfo.isIPad ? 140 : 120
+        DeviceInfo.isIPad ? 130 : 110
     }
 
     private var lineWidth: CGFloat {
-        DeviceInfo.isIPad ? 14 : 12
+        DeviceInfo.isIPad ? 12 : 10
+    }
+
+    private var scoreColor: Color {
+        if score >= 80 { return .appGreen }
+        else if score >= 60 { return .appOrange }
+        else { return .appRed }
     }
 
     var body: some View {
-        let theme = themeManager.selectedTheme
-
         ZStack {
             Circle()
-                .stroke(theme.cardBackground, lineWidth: lineWidth)
+                .stroke(Color.appSeparator.opacity(0.3), lineWidth: lineWidth)
 
             Circle()
                 .trim(from: 0, to: animatedScore / 100.0)
                 .stroke(
-                    AngularGradient(
-                        colors: [theme.accentColor, theme.secondaryAccent, theme.accentColor],
-                        center: .center
-                    ),
+                    scoreColor,
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .animation(.spring(response: 0.8, dampingFraction: 0.7), value: animatedScore)
+                .animation(.spring(response: 0.8, dampingFraction: 0.8), value: animatedScore)
 
-            VStack(spacing: DeviceInfo.isIPad ? 6 : 4) {
+            VStack(spacing: 2) {
                 Text("\(score)")
-                    .font(.system(size: DeviceInfo.isIPad ? 42 : 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(theme.textPrimary)
-                Text("Sleep Score")
-                    .font(ResponsiveFont.caption(horizontalSizeClass))
-                    .foregroundStyle(theme.textSecondary)
+                    .font(.system(size: DeviceInfo.isIPad ? 38 : 32, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text("Score")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(width: circleSize, height: circleSize)
         .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.2)) {
                 animatedScore = CGFloat(score)
             }
         }
         .onChange(of: score) { newValue in
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.8)) {
                 animatedScore = CGFloat(newValue)
             }
         }
     }
 }
 
-// MARK: - App Background
+// MARK: - App Background (Clean)
 
 struct AppBackgroundView: View {
     @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
-        let theme = themeManager.selectedTheme
-
-        Group {
-            if theme.colors.count == 1 {
-                // Solid theme
-                theme.colors[0]
-            } else {
-                // Gradient theme
-                LinearGradient(
-                    colors: theme.colors,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-        }
-        .overlay(
-            // Subtle accent overlay (non-animated)
-            RadialGradient(
-                colors: [
-                    theme.accentColor.opacity(0.15),
-                    theme.accentColor.opacity(0.05),
-                    .clear
-                ],
-                center: .topTrailing,
-                startRadius: 100,
-                endRadius: 400
-            )
-        )
-        .overlay(
-            // Subtle bottom accent
-            RadialGradient(
-                colors: [
-                    theme.secondaryAccent.opacity(0.08),
-                    .clear
-                ],
-                center: .bottomLeading,
-                startRadius: 50,
-                endRadius: 300
-            )
-        )
-        .ignoresSafeArea()
-        .animation(.easeInOut(duration: 0.4), value: theme)
+        Color.appBackground
+            .ignoresSafeArea()
     }
 }
 
-// MARK: - Themed Glass Card Modifier
+// MARK: - Card Modifier (Apple Style)
 
 extension View {
-    func themedCard(
-        theme: AppTheme,
-        cornerRadius: CGFloat = 24,
-        padding: CGFloat = 20
-    ) -> some View {
+    func cardStyle(padding: CGFloat = 16) -> some View {
         self
             .padding(padding)
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(theme.cardBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .stroke(theme.accentColor.opacity(0.12), lineWidth: 1)
-                    )
-            )
-            .shadow(color: .black.opacity(0.25), radius: 16, x: 0, y: 8)
-            .animation(.easeInOut(duration: 0.3), value: theme)
+            .background(Color.appSecondaryBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    func groupedCardStyle() -> some View {
+        self
+            .background(Color.appSecondaryBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    // Legacy support
+    func themedCard(
+        theme: AppTheme,
+        cornerRadius: CGFloat = 12,
+        padding: CGFloat = 16
+    ) -> some View {
+        self.cardStyle(padding: padding)
     }
 
     func glassCard(
-        cornerRadius: CGFloat = 24,
+        cornerRadius: CGFloat = 12,
         tint: LinearGradient? = nil,
-        strokeColor: Color = .white.opacity(0.15),
-        shadowColor: Color = .black.opacity(0.35)
+        strokeColor: Color = .clear,
+        shadowColor: Color = .clear
     ) -> some View {
-        modifier(
-            GlassModifier(
-                cornerRadius: cornerRadius,
-                tint: tint,
-                strokeColor: strokeColor,
-                shadowColor: shadowColor
-            )
-        )
+        self
+            .background(Color.appSecondaryBackground)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
-struct GlassModifier: ViewModifier {
-    let cornerRadius: CGFloat
-    let tint: LinearGradient?
-    let strokeColor: Color
-    let shadowColor: Color
-
-    func body(content: Content) -> some View {
-        content
-            .background(
-                ZStack {
-                    if let tint {
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .fill(tint)
-                    }
-
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: cornerRadius)
-                                .stroke(strokeColor, lineWidth: 1)
-                        )
-                }
-                .shadow(color: shadowColor, radius: 28, x: 0, y: 12)
-            )
-    }
-}
-
-// MARK: - Label Styles
+// MARK: - Label Style
 
 extension LabelStyle where Self == IconLeadingLabelStyle {
     static var iconLeading: IconLeadingLabelStyle { IconLeadingLabelStyle() }
@@ -559,29 +360,11 @@ extension LabelStyle where Self == IconLeadingLabelStyle {
 
 struct IconLeadingLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             configuration.icon
             configuration.title
         }
     }
-}
-
-// MARK: - Color Extensions
-
-extension Color {
-    static let accentBlue = Color(red: 0.38, green: 0.55, blue: 0.97)
-    static let accentPurple = Color(red: 0.67, green: 0.44, blue: 0.98)
-    static let accentGreen = Color(red: 0.3, green: 0.84, blue: 0.6)
-    static let accentOrange = Color(red: 0.98, green: 0.54, blue: 0.2)
-    static let accentTeal = Color(red: 0.32, green: 0.82, blue: 0.86)
-}
-
-extension ShapeStyle where Self == Color {
-    static var accentBlue: Color { Color.accentBlue }
-    static var accentPurple: Color { Color.accentPurple }
-    static var accentGreen: Color { Color.accentGreen }
-    static var accentOrange: Color { Color.accentOrange }
-    static var accentTeal: Color { Color.accentTeal }
 }
 
 // MARK: - TimeInterval Extension
@@ -592,5 +375,20 @@ extension TimeInterval {
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
         return "\(hours)h \(minutes)m"
+    }
+}
+
+// MARK: - Glass Modifier (Legacy Support)
+
+struct GlassModifier: ViewModifier {
+    let cornerRadius: CGFloat
+    let tint: LinearGradient?
+    let strokeColor: Color
+    let shadowColor: Color
+
+    func body(content: Content) -> some View {
+        content
+            .background(Color.appSecondaryBackground)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
