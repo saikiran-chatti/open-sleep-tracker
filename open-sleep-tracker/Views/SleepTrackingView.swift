@@ -2,7 +2,7 @@
 //  SleepTrackingView.swift
 //  open-sleep-tracker
 //
-//  Created by AI Agent on 11/22/25.
+//  Apple-style minimalist sleep tracking
 //
 
 import SwiftUI
@@ -17,41 +17,34 @@ struct SleepTrackingView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppBackgroundView()
+            ScrollView {
+                LazyVStack(spacing: 24) {
+                    // Recording Control
+                    RecordingControlCard(
+                        audioRecorder: audioRecorder,
+                        onStandBy: DeviceInfo.isIPad ? { showStandBy = true } : nil
+                    )
 
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: ResponsiveSpacing.sectionSpacing(horizontalSizeClass)) {
-                        ScheduleOverview(schedule: schedule)
+                    // Schedule Overview
+                    ScheduleCard(schedule: schedule)
 
-                        LiveSessionControl(
-                            audioRecorder: audioRecorder,
-                            onStandByTrigger: DeviceInfo.isIPad ? { showStandBy = true } : nil
-                        )
+                    // Pre-Sleep Checklist
+                    ChecklistCard(routines: schedule.routines)
 
-                        RoutineChecklist(actions: schedule.routines)
-
-                        EnvironmentSection(readings: schedule.environmentReadings)
-                    }
-                    .responsivePadding(horizontalSizeClass)
-                    .padding(.vertical, ResponsiveSpacing.containerPadding(horizontalSizeClass))
-                    .maxContentWidth()
+                    // Environment
+                    EnvironmentCard(readings: schedule.environmentReadings)
                 }
+                .padding()
             }
-            .navigationTitle("Sleep Sessions")
+            .background(Color.appBackground)
+            .navigationTitle("Sleep")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        if DeviceInfo.isIPad && audioRecorder.isRecording {
-                            Button {
-                                showStandBy = true
-                            } label: {
-                                Label("StandBy", systemImage: "display")
-                            }
-                        }
-
-                        Button("Optimize") {
-                            schedule = DashboardData.SessionSchedule.optimized
+                    if DeviceInfo.isIPad && audioRecorder.isRecording {
+                        Button {
+                            showStandBy = true
+                        } label: {
+                            Label("StandBy", systemImage: "display")
                         }
                     }
                 }
@@ -65,253 +58,307 @@ struct SleepTrackingView: View {
     }
 }
 
-// MARK: - Schedule Overview
+// MARK: - Recording Control Card
+
+struct RecordingControlCard: View {
+    @ObservedObject var audioRecorder: AudioRecorder
+    var onStandBy: (() -> Void)?
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // Main Recording Button
+            Button {
+                if audioRecorder.isRecording {
+                    audioRecorder.stopRecording()
+                } else {
+                    audioRecorder.startRecording()
+                }
+            } label: {
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(audioRecorder.isRecording ? Color.orange.opacity(0.15) : Color.green.opacity(0.15))
+                            .frame(width: 120, height: 120)
+
+                        Image(systemName: audioRecorder.isRecording ? "stop.fill" : "moon.zzz.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(audioRecorder.isRecording ? .orange : .green)
+                    }
+
+                    Text(audioRecorder.isRecording ? "Stop Recording" : "Start Sleep Session")
+                        .font(.headline)
+                }
+            }
+            .buttonStyle(.plain)
+
+            if audioRecorder.isRecording {
+                // Recording Status
+                VStack(spacing: 16) {
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Duration")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(audioRecorder.recordingDuration.formattedDurationDescription)
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                        }
+
+                        Spacer()
+
+                        VStack(alignment: .trailing) {
+                            Text("Status")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(.orange)
+                                    .frame(width: 8, height: 8)
+                                Text("Recording")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+                        }
+                    }
+
+                    // Audio Level
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Audio Level")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        GeometryReader { geometry in
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.appSeparator.opacity(0.3))
+                                .overlay(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color.orange)
+                                        .frame(width: geometry.size.width * CGFloat(audioRecorder.audioLevel))
+                                }
+                        }
+                        .frame(height: 8)
+                    }
+
+                    // StandBy Button (iPad)
+                    if let standByAction = onStandBy {
+                        Button {
+                            standByAction()
+                        } label: {
+                            Label("Enter StandBy Mode", systemImage: "display")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .padding(16)
+                .background(Color.appTertiaryBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else {
+                Text("Tap to start tracking your sleep")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(20)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+// MARK: - Schedule Card
+
+struct ScheduleCard: View {
+    let schedule: DashboardData.SessionSchedule
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Tonight's Schedule")
+                    .font(.headline)
+
+                Spacer()
+
+                Text(schedule.sleepWindow)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider()
+
+            ForEach(schedule.checkpoints) { checkpoint in
+                HStack(spacing: 14) {
+                    Image(systemName: checkpoint.icon)
+                        .foregroundStyle(checkpoint.tint)
+                        .frame(width: 32, height: 32)
+                        .background(checkpoint.tint.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(checkpoint.timeLabel)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+
+                        Text(checkpoint.description)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Text(checkpoint.phase)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Checklist Card
+
+struct ChecklistCard: View {
+    let routines: [DashboardData.SessionSchedule.Routine]
+    @State private var completed: Set<UUID> = []
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Pre-Sleep Routine")
+                    .font(.headline)
+
+                Spacer()
+
+                Text("\(completed.count)/\(routines.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider()
+
+            ForEach(routines) { routine in
+                Button {
+                    toggleCompletion(routine.id)
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: completed.contains(routine.id) ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(completed.contains(routine.id) ? .green : .secondary)
+                            .font(.title3)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(routine.title)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(completed.contains(routine.id) ? .secondary : .primary)
+
+                            Text(routine.detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(16)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func toggleCompletion(_ id: UUID) {
+        withAnimation {
+            if completed.contains(id) {
+                completed.remove(id)
+            } else {
+                completed.insert(id)
+            }
+        }
+    }
+}
+
+// MARK: - Environment Card
+
+struct EnvironmentCard: View {
+    let readings: [DashboardData.SessionSchedule.EnvironmentReading]
+
+    private var columns: [GridItem] {
+        [GridItem(.flexible()), GridItem(.flexible())]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Environment")
+                .font(.headline)
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(readings) { reading in
+                    EnvironmentTile(reading: reading)
+                }
+            }
+        }
+    }
+}
+
+struct EnvironmentTile: View {
+    let reading: DashboardData.SessionSchedule.EnvironmentReading
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: reading.icon)
+                    .foregroundStyle(reading.tint)
+
+                Spacer()
+
+                Text(reading.status)
+                    .font(.caption)
+                    .foregroundStyle(reading.tint)
+            }
+
+            Text(reading.value)
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text(reading.title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Legacy Support
 
 struct ScheduleOverview: View {
     let schedule: DashboardData.SessionSchedule
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(
-                title: "Tonight's Schedule",
-                subtitle: "Synced via Data Synchronization Agent"
-            )
-
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Label(schedule.sleepWindow, systemImage: "calendar.badge.clock")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    Spacer()
-                    BadgeView(text: schedule.focus, icon: "target", color: .accentPurple)
-                }
-
-                Text(schedule.summary)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.7))
-
-                Divider().background(.white.opacity(0.1))
-
-                ForEach(schedule.checkpoints) { checkpoint in
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: checkpoint.icon)
-                            .foregroundStyle(checkpoint.tint)
-                            .frame(width: 28, height: 28)
-                            .background(checkpoint.tint.opacity(0.18))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(checkpoint.phase)
-                                    .font(.footnote)
-                                    .foregroundStyle(.white.opacity(0.6))
-                                Spacer()
-                                Text(checkpoint.timeLabel)
-                                    .font(.footnote)
-                                    .foregroundStyle(.white)
-                            }
-
-                            Text(checkpoint.description)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.7))
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
-            .padding(20)
-            .glassCard(
-                cornerRadius: 26,
-                tint: LinearGradient(
-                    colors: [.accentTeal.opacity(0.18), .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-        }
+        ScheduleCard(schedule: schedule)
     }
 }
 
-// MARK: - Live Session Control
-
-struct LiveSessionControl: View {
-    @ObservedObject var audioRecorder: AudioRecorder
-    var onStandByTrigger: (() -> Void)?
-    @State private var animatePulse = false
+struct RoutineChecklist: View {
+    let actions: [DashboardData.SessionSchedule.Routine]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            SectionHeader(
-                title: "Live Session",
-                subtitle: "Audio Classification Agent monitors in real time"
-            )
-
-            VStack(spacing: 24) {
-                ZStack {
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                        .background(
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [
-                                            Color.accentBlue.opacity(0.35),
-                                            Color.accentPurple.opacity(0.25),
-                                            Color.clear
-                                        ],
-                                        center: .center,
-                                        startRadius: 0,
-                                        endRadius: 140
-                                    )
-                                )
-                        )
-                        .overlay {
-                            Circle()
-                                .stroke(
-                                    AngularGradient(
-                                        colors: [.accentBlue, .accentPurple, .accentTeal],
-                                        center: .center
-                                    ),
-                                    lineWidth: 2
-                                )
-                                .opacity(0.6)
-                        }
-                        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 12)
-                        .overlay(
-                            Circle()
-                                .stroke(.white.opacity(0.08), lineWidth: 20)
-                                .scaleEffect(animatePulse ? 1.15 : 0.9)
-                                .opacity(animatePulse ? 0.35 : 0.15)
-                                .animation(
-                                    .easeInOut(duration: 1.8)
-                                        .repeatForever(autoreverses: true),
-                                    value: animatePulse
-                                )
-                        )
-
-                    VStack(spacing: 12) {
-                        Image(systemName: audioRecorder.isRecording ? "stop.circle.fill" : "record.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundStyle(audioRecorder.isRecording ? Color.accentOrange : Color.accentGreen)
-                            .accessibilityHidden(true)
-
-                        Button {
-                            toggleRecording()
-                        } label: {
-                            Text(audioRecorder.isRecording ? "Stop Session" : "Start Sleep Session")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(
-                                    Capsule()
-                                        .fill(audioRecorder.isRecording ? Color.accentOrange.opacity(0.2) : Color.accentGreen.opacity(0.25))
-                                        .overlay(
-                                            Capsule()
-                                                .stroke(
-                                                    audioRecorder.isRecording ? Color.accentOrange.opacity(0.5) : Color.accentGreen.opacity(0.5),
-                                                    lineWidth: 1
-                                                )
-                                        )
-                                )
-                                .foregroundStyle(.white)
-                        }
-                        .buttonStyle(.plain)
-
-                        Text(audioRecorder.isRecording ? recordingSubtitle : "Audio Classification Agent ready to monitor snoring patterns.")
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                    }
-                }
-                .frame(height: 240)
-
-                if audioRecorder.isRecording {
-                    VStack(spacing: 16) {
-                        SessionMetrics(duration: audioRecorder.recordingDuration, level: audioRecorder.audioLevel)
-
-                        // StandBy Mode Button (iPad only)
-                        if let standByAction = onStandByTrigger, DeviceInfo.isIPad {
-                            Button {
-                                standByAction()
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "display")
-                                        .font(.title3)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Enter StandBy Mode")
-                                            .font(.headline)
-                                            .fontWeight(.semibold)
-                                        Text("Optimized nightstand display")
-                                            .font(.caption)
-                                            .foregroundStyle(.white.opacity(0.7))
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.footnote)
-                                        .foregroundStyle(.white.opacity(0.5))
-                                }
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(.white.opacity(0.08))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(
-                                                    LinearGradient(
-                                                        colors: [.accentBlue.opacity(0.3), .accentPurple.opacity(0.2)],
-                                                        startPoint: .leading,
-                                                        endPoint: .trailing
-                                                    ),
-                                                    lineWidth: 1
-                                                )
-                                        )
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                } else {
-                    SessionScheduler()
-                }
-            }
-            .padding(24)
-            .glassCard(
-                cornerRadius: 28,
-                tint: LinearGradient(
-                    colors: [.accentBlue.opacity(0.2), .accentPurple.opacity(0.25)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-        }
-        .onAppear {
-            animatePulse = audioRecorder.isRecording
-        }
-        .onChange(of: audioRecorder.isRecording) { newValue in
-            withAnimation(.easeInOut(duration: 0.8)) {
-                animatePulse = newValue
-            }
-        }
-    }
-
-    private var recordingSubtitle: String {
-        "Monitoring snore intensity, filtering noise, and updating Sleep Pattern Analysis Agent."
-    }
-
-    private func toggleRecording() {
-        if audioRecorder.isRecording {
-            audioRecorder.stopRecording()
-        } else {
-            audioRecorder.startRecording()
-        }
+        ChecklistCard(routines: actions)
     }
 }
 
-// MARK: - Session Components
+struct EnvironmentSection: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let readings: [DashboardData.SessionSchedule.EnvironmentReading]
+
+    var body: some View {
+        EnvironmentCard(readings: readings)
+    }
+}
 
 struct SessionMetrics: View {
     let duration: TimeInterval
@@ -326,199 +373,21 @@ struct SessionMetrics: View {
             )
 
             MetricPill(
-                title: "Snore Activity",
+                title: "Activity",
                 value: "\(Int(level * 100))%",
                 icon: "waveform",
-                tint: .accentOrange
-            )
-
-            MetricPill(
-                title: "Confidence",
-                value: level > 0.6 ? "High" : "Moderate",
-                icon: "brain.head.profile",
-                tint: .accentTeal
+                tint: .orange
             )
         }
-        .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 }
 
 struct SessionScheduler: View {
-    private let tonight = DashboardData.SessionSchedule.sample
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Tonight's Plan", subtitle: "Optimized by Sleep Pattern Analysis Agent")
-
-            ForEach(tonight.checkpoints) { checkpoint in
-                HStack(alignment: .top, spacing: 12) {
-                    VStack {
-                        Circle()
-                            .fill(checkpoint.tint)
-                            .frame(width: 10, height: 10)
-                        if checkpoint.id != tonight.checkpoints.last?.id {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(.white.opacity(0.12))
-                                .frame(width: 2, height: 32)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(checkpoint.timeLabel)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white)
-
-                            Spacer()
-
-                            Text(checkpoint.phase)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.6))
-                        }
-
-                        Text(checkpoint.description)
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.65))
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-        }
-    }
-}
-
-// MARK: - Routine Checklist
-
-struct RoutineChecklist: View {
-    struct ChecklistItem: Identifiable {
-        let id = UUID()
-        let title: String
-        let detail: String
-        let icon: String
-        let tint: Color
-    }
-
-    let actions: [DashboardData.SessionSchedule.Routine]
-    @State private var completed: Set<UUID> = []
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Pre-Sleep Routine", subtitle: "Guided by Notification Agent")
-
-            VStack(spacing: 12) {
-                ForEach(actions) { action in
-                    Button {
-                        toggle(action.id)
-                    } label: {
-                        HStack(alignment: .center, spacing: 14) {
-                            Image(systemName: action.icon)
-                                .foregroundStyle(action.tint)
-                                .frame(width: 28, height: 28)
-                                .background(action.tint.opacity(0.18))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(action.title)
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.white)
-
-                                Text(action.detail)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.6))
-                            }
-
-                            Spacer()
-
-                            Image(systemName: completed.contains(action.id) ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(action.tint)
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                    }
-                    .buttonStyle(.plain)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(.white.opacity(0.04))
-                    )
-                }
-            }
-            .padding(18)
-            .glassCard(
-                cornerRadius: 24,
-                tint: LinearGradient(
-                    colors: [.accentOrange.opacity(0.15), .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-        }
-    }
-
-    private func toggle(_ id: UUID) {
-        if completed.contains(id) {
-            completed.remove(id)
-        } else {
-            completed.insert(id)
-        }
-    }
-}
-
-// MARK: - Environment Section
-
-struct EnvironmentSection: View {
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    let readings: [DashboardData.SessionSchedule.EnvironmentReading]
-
-    private var gridColumns: [GridItem] {
-        let minWidth: CGFloat = DeviceInfo.isIPad ? 200 : 160
-        let spacing: CGFloat = DeviceInfo.isIPad ? 20 : 16
-        return [GridItem(.adaptive(minimum: minWidth), spacing: spacing)]
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 20 : 16) {
-            SectionHeader(
-                title: "Environment Readiness",
-                subtitle: "Tracked with StandBy & Health Integration Agents"
-            )
-
-            LazyVGrid(columns: gridColumns, spacing: DeviceInfo.isIPad ? 20 : 16) {
-                ForEach(readings) { reading in
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Image(systemName: reading.icon)
-                                .foregroundStyle(reading.tint)
-
-                            Spacer()
-
-                            BadgeView(text: reading.status, icon: reading.statusIcon, color: reading.tint)
-                        }
-
-                        Text(reading.title)
-                            .font(.headline)
-                            .foregroundStyle(.white)
-
-                        Text(reading.value)
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-
-                        Text(reading.detail)
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.6))
-                    }
-                    .padding(20)
-                    .glassCard(
-                        cornerRadius: 22,
-                        tint: LinearGradient(
-                            colors: [reading.tint.opacity(0.18), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                }
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Session will start when you tap the button above")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
     }
 }

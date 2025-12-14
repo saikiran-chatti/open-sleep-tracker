@@ -2,7 +2,7 @@
 //  StandByView.swift
 //  open-sleep-tracker
 //
-//  iPad StandBy Mode for sleep tracking sessions
+//  Apple-style iPad StandBy Mode
 //
 
 import SwiftUI
@@ -18,14 +18,14 @@ struct StandByView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var currentTime = Date()
     @State private var showControls = false
-    @State private var dimTimer: Timer?
 
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
             // Background
-            StandByBackground(style: settings.backgroundStyle, theme: themeManager.selectedTheme)
+            Color.black
+                .ignoresSafeArea()
 
             // Content
             contentLayout
@@ -66,8 +66,8 @@ struct StandByView: View {
         }
         .gesture(
             DragGesture(minimumDistance: 50)
-                .onEnded { value in
-                    handleSwipe(value: value)
+                .onEnded { _ in
+                    standByState.recordInteraction()
                 }
         )
         .onReceive(timer) { _ in
@@ -116,11 +116,6 @@ struct StandByView: View {
         standByState.recordInteraction()
     }
 
-    private func handleSwipe(value: DragGesture.Value) {
-        standByState.recordInteraction()
-        // Page swiping is handled by TabView automatically
-    }
-
     private func checkAutoDim() {
         guard settings.autoDimEnabled else { return }
 
@@ -137,7 +132,6 @@ struct StandByView: View {
         standByState.activate()
         UIApplication.shared.isIdleTimerDisabled = settings.keepScreenOn
 
-        // Set brightness
         if settings.brightness < 1.0 {
             UIScreen.main.brightness = settings.brightness
         }
@@ -160,18 +154,15 @@ struct ClockPage: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Large Clock
             StandByClockWidget(time: currentTime, showSeconds: showSeconds, size: .large)
 
             Spacer()
 
-            // Subtle Recording Indicator
             if isRecording {
                 HStack(spacing: 12) {
                     Circle()
-                        .fill(.red)
+                        .fill(.orange)
                         .frame(width: 12, height: 12)
-                        .shadow(color: .red, radius: 8)
 
                     Text("Recording")
                         .font(.system(size: 18, weight: .medium, design: .rounded))
@@ -217,22 +208,19 @@ struct RecordingPage: View {
 
     var body: some View {
         VStack(spacing: 40) {
-            // Top: Small Clock
             StandByClockWidget(time: currentTime, showSeconds: false, size: .small)
                 .padding(.top, 40)
 
             Spacer()
 
-            // Center: Large Waveform
             if audioRecorder.isRecording {
                 AudioVisualizerWidget(audioLevel: audioRecorder.audioLevel)
             } else {
-                Text("Start recording to see live visualization")
+                Text("Start recording to see visualization")
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(.white.opacity(0.5))
             }
 
-            // Bottom: Detailed Stats
             if audioRecorder.isRecording {
                 DetailedStatsWidget(audioRecorder: audioRecorder)
             }
@@ -253,16 +241,10 @@ struct MetricsPage: View {
         VStack(spacing: 48) {
             Spacer()
 
-            // Top: Clock
             StandByClockWidget(time: currentTime, showSeconds: false, size: .medium)
 
-            // Middle: Recording Status
             if audioRecorder.isRecording {
                 RecordingStatusWidget(audioRecorder: audioRecorder)
-            }
-
-            // Bottom: Session Stats
-            if audioRecorder.isRecording {
                 SessionStatsWidget(audioRecorder: audioRecorder)
             } else {
                 Text("Start recording to see metrics")
@@ -338,16 +320,15 @@ struct RecordingStatusWidget: View {
 
     var body: some View {
         HStack(spacing: 24) {
-            // Recording Indicator
             ZStack {
                 Circle()
-                    .fill(.red.opacity(0.2))
+                    .fill(Color.orange.opacity(0.2))
                     .frame(width: 60, height: 60)
                     .scaleEffect(pulse ? 1.2 : 1.0)
                     .opacity(pulse ? 0.5 : 0.8)
 
                 Circle()
-                    .fill(.red)
+                    .fill(.orange)
                     .frame(width: 20, height: 20)
             }
             .onAppear {
@@ -424,55 +405,6 @@ struct SessionStatsWidget: View {
     }
 }
 
-// MARK: - Widget: Compact Stats
-
-struct CompactStatsWidget: View {
-    let audioRecorder: AudioRecorder
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            CompactStatRow(icon: "waveform", label: "Activity", value: "\(Int(audioRecorder.audioLevel * 100))%")
-            CompactStatRow(icon: "clock", label: "Duration", value: audioRecorder.recordingDuration.formattedDurationDescription)
-            CompactStatRow(icon: "mic.fill", label: "Status", value: "Recording")
-        }
-        .padding(32)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
-        )
-    }
-
-    struct CompactStatRow: View {
-        let icon: String
-        let label: String
-        let value: String
-
-        var body: some View {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .frame(width: 32)
-
-                Text(label)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
-
-                Spacer()
-
-                Text(value)
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .monospacedDigit()
-            }
-        }
-    }
-}
-
 // MARK: - Widget: Audio Visualizer
 
 struct AudioVisualizerWidget: View {
@@ -481,13 +413,12 @@ struct AudioVisualizerWidget: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            // Waveform
             HStack(alignment: .center, spacing: 8) {
                 ForEach(0..<20, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 4)
                         .fill(
                             LinearGradient(
-                                colors: [.accentBlue, .accentPurple],
+                                colors: [.blue, .purple],
                                 startPoint: .bottom,
                                 endPoint: .top
                             )
@@ -550,12 +481,8 @@ struct DetailedStatsWidget: View {
         }
         .padding(28)
         .background(
-            RoundedRectangle(cornerRadius: 28)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28)
-                        .stroke(.white.opacity(0.15), lineWidth: 1)
-                )
         )
     }
 
@@ -575,112 +502,6 @@ struct DetailedStatsWidget: View {
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
             }
-        }
-    }
-}
-
-// MARK: - Background Views
-
-struct StandByBackground: View {
-    let style: StandBySettings.BackgroundStyle
-    let theme: AppTheme
-
-    var body: some View {
-        ZStack {
-            Color.black
-
-            switch style {
-            case .solid:
-                Color(red: 0.05, green: 0.05, blue: 0.08)
-            case .gradient:
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.08, green: 0.09, blue: 0.14),
-                        Color(red: 0.04, green: 0.05, blue: 0.10),
-                        Color.black
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            case .aurora:
-                AuroraBackground()
-            case .stars:
-                StarfieldBackground()
-            case .minimal:
-                Color.black
-            }
-        }
-        .ignoresSafeArea()
-    }
-}
-
-struct AuroraBackground: View {
-    @State private var phase: CGFloat = 0
-
-    var body: some View {
-        ZStack {
-            Color.black
-
-            // Aurora layers
-            ForEach(0..<3, id: \.self) { index in
-                LinearGradient(
-                    colors: [
-                        Color.accentBlue.opacity(0.15),
-                        Color.accentPurple.opacity(0.12),
-                        Color.accentTeal.opacity(0.1),
-                        Color.clear
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .blur(radius: 40)
-                .offset(y: phase + CGFloat(index * 100))
-                .opacity(0.6)
-            }
-        }
-        .onAppear {
-            withAnimation(.linear(duration: 20).repeatForever(autoreverses: true)) {
-                phase = 100
-            }
-        }
-    }
-}
-
-struct StarfieldBackground: View {
-    @State private var stars: [(x: CGFloat, y: CGFloat, size: CGFloat, opacity: Double)] = []
-
-    var body: some View {
-        ZStack {
-            Color.black
-
-            Canvas { context, size in
-                for star in stars {
-                    let rect = CGRect(
-                        x: star.x * size.width,
-                        y: star.y * size.height,
-                        width: star.size,
-                        height: star.size
-                    )
-                    context.fill(
-                        Path(ellipseIn: rect),
-                        with: .color(.white.opacity(star.opacity))
-                    )
-                }
-            }
-        }
-        .onAppear {
-            generateStars()
-        }
-    }
-
-    private func generateStars() {
-        stars = (0..<100).map { _ in
-            (
-                x: CGFloat.random(in: 0...1),
-                y: CGFloat.random(in: 0...1),
-                size: CGFloat.random(in: 1...3),
-                opacity: Double.random(in: 0.3...0.9)
-            )
         }
     }
 }
@@ -721,7 +542,7 @@ struct StandByControls: View {
                         }
 
                         Slider(value: $settings.brightness, in: 0.1...1.0)
-                            .tint(.accentBlue)
+                            .tint(.blue)
                             .onChange(of: settings.brightness) { newValue in
                                 UIScreen.main.brightness = newValue
                             }
@@ -751,11 +572,11 @@ struct StandByControls: View {
                                 .foregroundStyle(.white)
                         }
                     }
-                    .tint(.accentBlue)
+                    .tint(.blue)
                 }
                 .padding(24)
                 .background(
-                    RoundedRectangle(cornerRadius: 24)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(.white.opacity(0.1))
                 )
 
@@ -767,7 +588,7 @@ struct StandByControls: View {
                 .padding(.horizontal, 32)
                 .padding(.vertical, 16)
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(.red.opacity(0.8))
                 )
             }
@@ -801,7 +622,72 @@ struct PageIndicators: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - Legacy Support
+
+struct StandByBackground: View {
+    let style: StandBySettings.BackgroundStyle
+    let theme: AppTheme
+
+    var body: some View {
+        Color.black
+            .ignoresSafeArea()
+    }
+}
+
+struct AuroraBackground: View {
+    var body: some View {
+        Color.black
+    }
+}
+
+struct StarfieldBackground: View {
+    var body: some View {
+        Color.black
+    }
+}
+
+struct CompactStatsWidget: View {
+    let audioRecorder: AudioRecorder
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            CompactStatRow(icon: "waveform", label: "Activity", value: "\(Int(audioRecorder.audioLevel * 100))%")
+            CompactStatRow(icon: "clock", label: "Duration", value: audioRecorder.recordingDuration.formattedDurationDescription)
+            CompactStatRow(icon: "mic.fill", label: "Status", value: "Recording")
+        }
+        .padding(32)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.white.opacity(0.05))
+        )
+    }
+
+    struct CompactStatRow: View {
+        let icon: String
+        let label: String
+        let value: String
+
+        var body: some View {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 32)
+
+                Text(label)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
+
+                Spacer()
+
+                Text(value)
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .monospacedDigit()
+            }
+        }
+    }
+}
 
 #Preview {
     StandByView(audioRecorder: AudioRecorder())

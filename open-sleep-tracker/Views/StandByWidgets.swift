@@ -2,7 +2,7 @@
 //  StandByWidgets.swift
 //  open-sleep-tracker
 //
-//  Sleep tracking widgets for StandBy Mode
+//  Apple-style StandBy widgets
 //
 
 import SwiftUI
@@ -50,7 +50,7 @@ struct SleepScoreWidget: View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: "gauge.with.needle")
-                    .foregroundStyle(.accentBlue)
+                    .foregroundStyle(.blue)
                 Text("Sleep Score")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
@@ -65,7 +65,7 @@ struct SleepScoreWidget: View {
                     .trim(from: 0, to: CGFloat(sleepScore) / 100.0)
                     .stroke(
                         LinearGradient(
-                            colors: [.accentBlue, .accentPurple],
+                            colors: [.blue, .purple],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
@@ -85,12 +85,8 @@ struct SleepScoreWidget: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }
@@ -104,7 +100,7 @@ struct PreviousNightWidget: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "moon.zzz")
-                    .foregroundStyle(.accentPurple)
+                    .foregroundStyle(.purple)
                 Text("Last Night")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
@@ -118,7 +114,7 @@ struct PreviousNightWidget: View {
             HStack(spacing: 8) {
                 Label("\(previousNight.deepSleepPercentage)%", systemImage: "sparkles")
                     .font(.caption)
-                    .foregroundStyle(.accentTeal)
+                    .foregroundStyle(.teal)
                 Text("deep")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.5))
@@ -127,7 +123,7 @@ struct PreviousNightWidget: View {
 
                 Label("\(previousNight.snoreEvents)", systemImage: "waveform")
                     .font(.caption)
-                    .foregroundStyle(.accentOrange)
+                    .foregroundStyle(.orange)
                 Text("events")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.5))
@@ -135,12 +131,8 @@ struct PreviousNightWidget: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }
@@ -154,7 +146,7 @@ struct EnvironmentWidget: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "thermometer.medium")
-                    .foregroundStyle(.accentGreen)
+                    .foregroundStyle(.green)
                 Text("Environment")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
@@ -188,12 +180,8 @@ struct EnvironmentWidget: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }
@@ -207,7 +195,7 @@ struct RecordingsWidget: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "waveform")
-                    .foregroundStyle(.accentOrange)
+                    .foregroundStyle(.orange)
                 Text("Recordings")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
@@ -225,22 +213,18 @@ struct RecordingsWidget: View {
             if audioRecorder.isRecording {
                 HStack(spacing: 8) {
                     Circle()
-                        .fill(.red)
+                        .fill(.orange)
                         .frame(width: 8, height: 8)
                     Text("Recording now...")
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.orange)
                 }
             }
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }
@@ -254,7 +238,7 @@ struct SleepGoalsWidget: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "target")
-                    .foregroundStyle(.accentTeal)
+                    .foregroundStyle(.teal)
                 Text("Sleep Goal")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
@@ -275,7 +259,7 @@ struct SleepGoalsWidget: View {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(
                                 LinearGradient(
-                                    colors: [.accentTeal, .accentGreen],
+                                    colors: [.teal, .green],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -292,12 +276,8 @@ struct SleepGoalsWidget: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }
@@ -311,7 +291,7 @@ struct SleepStreakWidget: View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: "flame")
-                    .foregroundStyle(.accentOrange)
+                    .foregroundStyle(.orange)
                 Text("Sleep Streak")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
@@ -334,12 +314,8 @@ struct SleepStreakWidget: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }
@@ -353,7 +329,7 @@ struct WeeklyTrendWidget: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "chart.line.uptrend.xyaxis")
-                    .foregroundStyle(.accentBlue)
+                    .foregroundStyle(.blue)
                 Text("This Week")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
@@ -361,7 +337,7 @@ struct WeeklyTrendWidget: View {
 
                 Image(systemName: "arrow.up.right")
                     .font(.caption)
-                    .foregroundStyle(.accentGreen)
+                    .foregroundStyle(.green)
             }
 
             HStack(alignment: .bottom, spacing: 4) {
@@ -369,7 +345,7 @@ struct WeeklyTrendWidget: View {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(
                             LinearGradient(
-                                colors: [.accentBlue, .accentPurple],
+                                colors: [.blue, .purple],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
@@ -385,12 +361,8 @@ struct WeeklyTrendWidget: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }
@@ -408,7 +380,7 @@ struct ActiveAgentsWidget: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "cpu.fill")
-                    .foregroundStyle(.accentPurple)
+                    .foregroundStyle(.purple)
                 Text("AI Agents")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
@@ -431,12 +403,8 @@ struct ActiveAgentsWidget: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }
@@ -473,12 +441,8 @@ struct HeartRateWidget: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }
@@ -486,7 +450,7 @@ struct HeartRateWidget: View {
 // MARK: - Bedtime Countdown Widget
 
 struct BedtimeCountdownWidget: View {
-    @State private var timeUntilBedtime: TimeInterval = 3600 * 2.5 // 2.5 hours
+    @State private var timeUntilBedtime: TimeInterval = 3600 * 2.5
 
     private var formattedTime: String {
         let hours = Int(timeUntilBedtime) / 3600
@@ -503,7 +467,7 @@ struct BedtimeCountdownWidget: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "clock.badge.checkmark")
-                    .foregroundStyle(.accentBlue)
+                    .foregroundStyle(.blue)
                 Text("Bedtime")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
@@ -520,12 +484,8 @@ struct BedtimeCountdownWidget: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
         )
     }
 }

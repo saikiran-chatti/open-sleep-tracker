@@ -2,7 +2,7 @@
 //  RecordingsView.swift
 //  open-sleep-tracker
 //
-//  Redesigned by Codex on 10/21/25.
+//  Apple-style minimalist recordings
 //
 
 import SwiftUI
@@ -19,7 +19,6 @@ struct RecordingsView: View {
         if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
             return audioRecorder.recordings
         }
-
         return audioRecorder.recordings.filter { recording in
             let needle = searchText.lowercased()
             return recording.fileName.lowercased().contains(needle) ||
@@ -33,74 +32,67 @@ struct RecordingsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppBackgroundView()
+            ScrollView {
+                LazyVStack(spacing: 20) {
+                    // Summary Stats
+                    SummaryStatsView(summary: summary)
 
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: ResponsiveSpacing.sectionSpacing(horizontalSizeClass)) {
-                        RecordingsHeader(summary: summary)
-
-                        if audioRecorder.isRecording {
-                            LiveRecordingBanner(
-                                duration: audioRecorder.recordingDuration,
-                                level: audioRecorder.audioLevel,
-                                stopAction: audioRecorder.stopRecording
-                            )
-                        }
-
-                        if recordings.isEmpty {
-                            EmptyRecordingsState(startAction: startRecording)
-                        } else {
-                            VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 20 : 16) {
-                                SectionHeader(
-                                    title: "Saved Sessions",
-                                    subtitle: "Powered by Audio Classification Agent"
-                                )
-
-                                LazyVStack(spacing: DeviceInfo.isIPad ? 20 : 16) {
-                                    ForEach(recordings) { recording in
-                                        RecordingCard(
-                                            recording: recording,
-                                            isPlaying: audioRecorder.currentlyPlayingId == recording.id && audioRecorder.isPlaying,
-                                            playAction: { audioRecorder.togglePlayback(recording) },
-                                            showAction: { selectedRecording = recording },
-                                            deleteAction: {
-                                                recordingPendingDeletion = recording
-                                                showDeleteConfirmation = true
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                    // Live Recording Banner
+                    if audioRecorder.isRecording {
+                        LiveRecordingCard(
+                            duration: audioRecorder.recordingDuration,
+                            level: audioRecorder.audioLevel,
+                            stopAction: audioRecorder.stopRecording
+                        )
                     }
-                    .responsivePadding(horizontalSizeClass)
-                    .padding(.vertical, ResponsiveSpacing.containerPadding(horizontalSizeClass))
-                    .maxContentWidth()
+
+                    // Recordings List
+                    if recordings.isEmpty {
+                        EmptyStateView(
+                            icon: "waveform.slash",
+                            title: "No Recordings",
+                            message: "Start a sleep session to capture audio",
+                            action: ("Start Recording", {
+                                if !audioRecorder.isRecording {
+                                    audioRecorder.startRecording()
+                                }
+                            })
+                        )
+                    } else {
+                        RecordingsListView(
+                            recordings: recordings,
+                            audioRecorder: audioRecorder,
+                            onSelect: { selectedRecording = $0 },
+                            onDelete: {
+                                recordingPendingDeletion = $0
+                                showDeleteConfirmation = true
+                            }
+                        )
+                    }
                 }
+                .padding()
             }
-            .navigationTitle("Sound Library")
+            .background(Color.appBackground)
+            .navigationTitle("Recordings")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        startRecording()
+                        if !audioRecorder.isRecording {
+                            audioRecorder.startRecording()
+                        }
                     } label: {
-                        Label("Quick Record", systemImage: "plus.circle")
+                        Image(systemName: "plus.circle.fill")
                     }
                 }
             }
         }
-        .searchable(
-            text: $searchText,
-            placement: .navigationBarDrawer(displayMode: .automatic),
-            prompt: "Search recordings"
-        )
+        .searchable(text: $searchText, prompt: "Search recordings")
         .sheet(item: $selectedRecording) { recording in
-            RecordingDetailView(recording: recording)
+            RecordingDetailSheet(recording: recording)
                 .presentationDetents([.medium, .large])
         }
         .confirmationDialog(
-            "Delete recording?",
+            "Delete Recording",
             isPresented: $showDeleteConfirmation,
             presenting: recordingPendingDeletion
         ) { recording in
@@ -108,418 +100,278 @@ struct RecordingsView: View {
                 audioRecorder.deleteRecording(recording)
             }
         } message: { recording in
-            Text("Remove \(recording.fileName)? This action cannot be undone.")
-        }
-    }
-    
-    private func startRecording() {
-        if !audioRecorder.isRecording {
-            audioRecorder.startRecording()
+            Text("This will permanently delete \"\(recording.fileName)\"")
         }
     }
 }
 
-// MARK: - Header & Summary
+// MARK: - Summary Stats
 
-private struct RecordingsHeader: View {
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+struct SummaryStatsView: View {
     let summary: RecordingSummary
 
-    private var gridColumns: [GridItem] {
-        let columnCount = DeviceInfo.isIPad && horizontalSizeClass == .regular ? 4 : 2
-        let spacing: CGFloat = DeviceInfo.isIPad ? 20 : 16
-        return Array(repeating: GridItem(.flexible(), spacing: spacing), count: columnCount)
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: DeviceInfo.isIPad ? 24 : 20) {
-            SectionHeader(
-                title: "Captured Nights",
-                subtitle: "Snore samples for personalization & model retraining"
-            )
-
-            LazyVGrid(columns: gridColumns, spacing: DeviceInfo.isIPad ? 20 : 16) {
-                SummaryTile(
-                    title: "Sessions",
-                    value: "\(summary.count)",
-                    caption: "Across \(summary.uniqueNights) nights",
-                    icon: "dot.radiowaves.left.and.right",
-                    tint: .accentBlue
-                )
-                
-                SummaryTile(
-                    title: "Listening Time",
-                    value: summary.totalDuration,
-                    caption: "Stored locally & encrypted",
-                    icon: "clock.arrow.circlepath",
-                    tint: .accentPurple
-                )
-                
-                SummaryTile(
-                    title: "Library Size",
-                    value: summary.totalSize,
-                    caption: "Auto pruned by Data Sync Agent",
-                    icon: "externaldrive.fill.badge.timelapse",
-                    tint: .accentTeal
-                )
-                
-                SummaryTile(
-                    title: "Avg. Snore Intensity",
-                    value: summary.averageIntensity,
-                    caption: "High = review with AI coach",
-                    icon: "waveform",
-                    tint: .accentOrange
-                )
-            }
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            StatCard(title: "Sessions", value: "\(summary.count)", icon: "waveform", color: .blue)
+            StatCard(title: "Duration", value: summary.totalDuration, icon: "clock", color: .purple)
+            StatCard(title: "Storage", value: summary.totalSize, icon: "internaldrive", color: .teal)
+            StatCard(title: "Avg Level", value: summary.averageIntensity, icon: "chart.bar", color: .orange)
         }
     }
 }
 
-private struct SummaryTile: View {
-    @EnvironmentObject var themeManager: ThemeManager
+struct StatCard: View {
     let title: String
     let value: String
-    let caption: String
     let icon: String
-    let tint: Color
-
-    @State private var appeared = false
+    let color: Color
 
     var body: some View {
-        let theme = themeManager.selectedTheme
-
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.caption)
-                    .foregroundStyle(tint)
-
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(tint)
-            }
-
-            Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: icon)
+                .foregroundStyle(color)
 
             Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(theme.textPrimary)
-                .contentTransition(.numericText())
+                .font(.title3)
+                .fontWeight(.semibold)
 
-            Text(caption)
+            Text(title)
                 .font(.caption)
-                .foregroundStyle(theme.textSecondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 22)
-                .fill(theme.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22)
-                        .fill(
-                            LinearGradient(
-                                colors: [tint.opacity(0.12), .clear],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22)
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    tint.opacity(0.3),
-                                    tint.opacity(0.1)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-        )
-        .shadow(color: tint.opacity(0.15), radius: 8, x: 0, y: 4)
-        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
-        .scaleEffect(appeared ? 1.0 : 0.95)
-        .opacity(appeared ? 1.0 : 0.0)
-        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: appeared)
-        .animation(.easeInOut(duration: 0.3), value: theme)
-        .onAppear {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.1)) {
-                appeared = true
-            }
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
-private struct LiveRecordingBanner: View {
+// MARK: - Live Recording Card
+
+struct LiveRecordingCard: View {
     let duration: TimeInterval
     let level: Float
     let stopAction: () -> Void
-    @State private var pulse = false
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(spacing: 16) {
             HStack {
-                Label("Recording in progress", systemImage: "dot.radiowaves.left.and.right")
-                    .font(.headline)
-                    .foregroundStyle(Color.accentOrange)
-                
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(.orange)
+                        .frame(width: 10, height: 10)
+
+                    Text("Recording in Progress")
+                        .font(.headline)
+                }
+
                 Spacer()
-                
+
                 Button("Stop") {
                     stopAction()
                 }
-                .font(.caption)
-                .foregroundStyle(Color.accentOrange)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(.white.opacity(0.08))
-                .clipShape(Capsule())
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(.orange)
             }
-            
-            Text("Audio Classification Agent is capturing clean samples and tagging snore intensity.")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.7))
-            
-            HStack(alignment: .center, spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(Color.accentOrange.opacity(0.25))
-                        .frame(width: 56, height: 56)
-                        .scaleEffect(pulse ? 1.1 : 0.85)
-                        .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: pulse)
-                    
-                    Circle()
-                        .fill(Color.accentOrange)
-                        .frame(width: 18, height: 18)
-                }
-                .onAppear { pulse = true }
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Elapsed \(duration.formattedDurationDescription)")
-                        .font(.subheadline)
-                        .foregroundStyle(.white)
-                    
-                    ProgressView(value: Double(level))
-                        .tint(Color.accentOrange)
-                        .background(Capsule().fill(.white.opacity(0.1)))
-                        .clipShape(Capsule())
-                }
-            }
-        }
-        .padding(22)
-        .glassCard(
-            cornerRadius: 26,
-            tint: LinearGradient(
-                colors: [Color.accentOrange.opacity(0.2), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-    }
-}
 
-private struct RecordingCard: View {
-    let recording: AudioRecording
-    let isPlaying: Bool
-    let playAction: () -> Void
-    let showAction: () -> Void
-    let deleteAction: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(recordingTitle)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-
-                    Text(recording.formattedDate)
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("Duration")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.secondary)
+                    Text(duration.formattedDurationDescription)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                 }
 
                 Spacer()
 
-                // Encryption badge
-                if recording.isEncrypted {
-                    Image(systemName: "lock.shield.fill")
+                VStack(alignment: .trailing) {
+                    Text("Level")
                         .font(.caption)
-                        .foregroundStyle(.accentGreen)
-                }
-
-                Menu {
-                    Button("Review details", action: showAction)
-                    Button("Delete", role: .destructive, action: deleteAction)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.title3)
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-            }
-
-            HStack(spacing: 16) {
-                MetricPill(
-                    title: "Duration",
-                    value: recording.formattedDuration,
-                    icon: "clock.badge.checkmark",
-                    tint: Color.accentBlue
-                )
-
-                MetricPill(
-                    title: "Size",
-                    value: recording.fileSize,
-                    icon: "externaldrive.fill",
-                    tint: Color.accentTeal
-                )
-
-                MetricPill(
-                    title: "Intensity",
-                    value: "\(Int(recording.audioLevel * 100))%",
-                    icon: "waveform.path.ecg",
-                    tint: recording.audioLevel > 0.6 ? Color.accentOrange : Color.accentGreen
-                )
-            }
-
-            HStack(spacing: 12) {
-                Button {
-                    playAction()
-                } label: {
-                    Label(isPlaying ? "Stop" : "Play snippet", systemImage: isPlaying ? "stop.fill" : "play.fill")
+                        .foregroundStyle(.secondary)
+                    Text("\(Int(level * 100))%")
                         .font(.subheadline)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(isPlaying ? Color.accentOrange.opacity(0.8) : Color.accentBlue.opacity(0.8))
-
-                Button("Open analysis", action: showAction)
-                    .buttonStyle(.bordered)
-                    .tint(Color.accentPurple)
-            }
-
-            HStack(spacing: 8) {
-                if recording.audioLevel > 0.7 {
-                    BadgeView(text: "High snore intensity", icon: "exclamationmark.triangle.fill", color: Color.accentOrange)
-                } else if recording.audioLevel < 0.3 {
-                    BadgeView(text: "Quiet sample", icon: "leaf", color: Color.accentGreen)
-                }
-
-                if recording.isEncrypted {
-                    BadgeView(text: "Encrypted", icon: "lock.fill", color: Color.accentTeal)
+                        .fontWeight(.medium)
                 }
             }
+
+            // Progress bar
+            GeometryReader { geometry in
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.appSeparator.opacity(0.3))
+                    .overlay(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.orange)
+                            .frame(width: geometry.size.width * CGFloat(level))
+                    }
+            }
+            .frame(height: 6)
         }
-        .padding(22)
-        .glassCard(
-            cornerRadius: 24,
-            tint: LinearGradient(
-                colors: [.white.opacity(0.04), Color.accentBlue.opacity(0.12)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            shadowColor: .black.opacity(0.2)
-        )
-    }
-
-    private var recordingTitle: String {
-        recording.fileName.replacingOccurrences(of: ".m4a", with: "").replacingOccurrences(of: ".encrypted", with: "")
+        .padding(16)
+        .background(Color.orange.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
-private struct EmptyRecordingsState: View {
-    let startAction: () -> Void
-    
+// MARK: - Recordings List
+
+struct RecordingsListView: View {
+    let recordings: [AudioRecording]
+    @ObservedObject var audioRecorder: AudioRecorder
+    let onSelect: (AudioRecording) -> Void
+    let onDelete: (AudioRecording) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("All Recordings")
+                .font(.headline)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 8) {
+                ForEach(recordings) { recording in
+                    RecordingRow(
+                        recording: recording,
+                        isPlaying: audioRecorder.currentlyPlayingId == recording.id && audioRecorder.isPlaying,
+                        onPlay: { audioRecorder.togglePlayback(recording) },
+                        onSelect: { onSelect(recording) },
+                        onDelete: { onDelete(recording) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+struct RecordingRow: View {
+    let recording: AudioRecording
+    let isPlaying: Bool
+    let onPlay: () -> Void
+    let onSelect: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            // Play Button
+            Button {
+                onPlay()
+            } label: {
+                Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                    .font(.title3)
+                    .foregroundStyle(isPlaying ? .orange : .blue)
+                    .frame(width: 44, height: 44)
+                    .background(isPlaying ? Color.orange.opacity(0.12) : Color.blue.opacity(0.12))
+                    .clipShape(Circle())
+            }
+
+            // Info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(recording.fileName.replacingOccurrences(of: ".m4a", with: ""))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+
+                HStack(spacing: 8) {
+                    Text(recording.formattedDate)
+                    Text("•")
+                    Text(recording.formattedDuration)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            // Menu
+            Menu {
+                Button("Details", action: onSelect)
+                Button("Delete", role: .destructive, action: onDelete)
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(12)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Empty State
+
+struct EmptyStateView: View {
+    let icon: String
+    let title: String
+    let message: String
+    var action: (String, () -> Void)?
+
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "waveform.slash")
-                .font(.system(size: 54))
-                .foregroundStyle(Color.accentBlue)
-            
-            Text("No recordings yet")
+            Image(systemName: icon)
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+
+            Text(title)
                 .font(.headline)
-                .foregroundStyle(.white)
-            
-            Text("Start a sleep session and Audio Classification Agent will capture the first sample.")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.65))
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            
-            Button(action: startAction) {
-                Label("Start recording", systemImage: "record.circle")
+
+            if let action = action {
+                Button(action.0) {
+                    action.1()
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accentGreen.opacity(0.9))
         }
-        .padding(36)
-        .glassCard(
-            cornerRadius: 26,
-            tint: LinearGradient(
-                colors: [Color.accentBlue.opacity(0.18), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .padding(32)
+        .frame(maxWidth: .infinity)
+        .background(Color.appSecondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
-// MARK: - Detail Sheet
+// MARK: - Recording Detail Sheet
 
-private struct RecordingDetailView: View {
+struct RecordingDetailSheet: View {
     let recording: AudioRecording
-    
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                SectionHeader(
-                    title: "Recording Overview",
-                    subtitle: "Captured \(recording.formattedDate)"
-                )
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("File name: \(recording.fileName)", systemImage: "doc")
-                    Label("Duration: \(recording.formattedDuration)", systemImage: "clock")
-                    Label("File size: \(recording.fileSize)", systemImage: "externaldrive")
-                    
-                    if let end = recording.endTime {
-                        Label("Completed: \(formatted(date: end))", systemImage: "checkmark.circle")
+        NavigationStack {
+            List {
+                Section("Details") {
+                    LabeledContent("File Name", value: recording.fileName)
+                    LabeledContent("Date", value: recording.formattedDate)
+                    LabeledContent("Duration", value: recording.formattedDuration)
+                    LabeledContent("Size", value: recording.fileSize)
+                }
+
+                Section("Audio Analysis") {
+                    LabeledContent("Average Level", value: "\(Int(recording.audioLevel * 100))%")
+
+                    if recording.audioLevel > 0.7 {
+                        Label("High snore activity detected", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                    } else if recording.audioLevel < 0.3 {
+                        Label("Quiet recording", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
                     }
                 }
-                .padding(20)
-                .glassCard(cornerRadius: 24)
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    SectionHeader(title: "Agent Notes", subtitle: "Auto-generated tags")
-                    
-                    BadgeView(text: "Audio Classification Agent", icon: "waveform", color: Color.accentBlue)
-                    BadgeView(text: "Sleep Pattern Analysis Agent", icon: "chart.xyaxis.line", color: Color.accentPurple)
-                    BadgeView(text: "Health Integration Agent", icon: "heart", color: Color.accentTeal)
+
+                if recording.isEncrypted {
+                    Section {
+                        Label("This recording is encrypted", systemImage: "lock.fill")
+                            .foregroundStyle(.green)
+                    }
                 }
-                .padding(20)
-                .glassCard(
-                    cornerRadius: 24,
-                    tint: LinearGradient(
-                        colors: [Color.accentPurple.opacity(0.18), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
             }
-            .padding(20)
+            .navigationTitle("Recording")
+            .navigationBarTitleDisplayMode(.inline)
         }
-        .background(AppBackgroundView())
-        .presentationBackground(.ultraThinMaterial)
-    }
-    
-    private func formatted(date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }
 
@@ -531,28 +383,100 @@ private struct RecordingSummary {
     let totalDuration: String
     let totalSize: String
     let averageIntensity: String
-    
+
     init(recordings: [AudioRecording]) {
         count = recordings.count
-        
+
         let nights = Set(recordings.map { Calendar.current.startOfDay(for: $0.startTime) })
         uniqueNights = nights.count
-        
+
         let totalSeconds = recordings.reduce(0.0) { $0 + $1.duration }
         totalDuration = totalSeconds.formattedDurationDescription
-        
+
         let totalBytes = recordings.reduce(Int64(0)) { partial, recording in
             let attributes = try? FileManager.default.attributesOfItem(atPath: recording.fileURL.path)
             let size = attributes?[.size] as? Int64 ?? 0
             return partial + size
         }
         totalSize = ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)
-        
+
         if recordings.isEmpty {
             averageIntensity = "—"
         } else {
             let average = recordings.reduce(0.0) { $0 + Double($1.audioLevel) } / Double(recordings.count)
             averageIntensity = "\(Int(average * 100))%"
         }
+    }
+}
+
+// MARK: - Legacy Support
+
+private struct RecordingsHeader: View {
+    let summary: RecordingSummary
+
+    var body: some View {
+        SummaryStatsView(summary: summary)
+    }
+}
+
+private struct SummaryTile: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    let title: String
+    let value: String
+    let caption: String
+    let icon: String
+    let tint: Color
+
+    var body: some View {
+        StatCard(title: title, value: value, icon: icon, color: tint)
+    }
+}
+
+private struct LiveRecordingBanner: View {
+    let duration: TimeInterval
+    let level: Float
+    let stopAction: () -> Void
+
+    var body: some View {
+        LiveRecordingCard(duration: duration, level: level, stopAction: stopAction)
+    }
+}
+
+private struct RecordingCard: View {
+    let recording: AudioRecording
+    let isPlaying: Bool
+    let playAction: () -> Void
+    let showAction: () -> Void
+    let deleteAction: () -> Void
+
+    var body: some View {
+        RecordingRow(
+            recording: recording,
+            isPlaying: isPlaying,
+            onPlay: playAction,
+            onSelect: showAction,
+            onDelete: deleteAction
+        )
+    }
+}
+
+private struct EmptyRecordingsState: View {
+    let startAction: () -> Void
+
+    var body: some View {
+        EmptyStateView(
+            icon: "waveform.slash",
+            title: "No Recordings",
+            message: "Start a sleep session to capture audio",
+            action: ("Start Recording", startAction)
+        )
+    }
+}
+
+private struct RecordingDetailView: View {
+    let recording: AudioRecording
+
+    var body: some View {
+        RecordingDetailSheet(recording: recording)
     }
 }
