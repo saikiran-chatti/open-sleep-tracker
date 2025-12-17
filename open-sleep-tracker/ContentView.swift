@@ -40,10 +40,13 @@ struct ContentView: View {
 
     private var iPadLayout: some View {
         NavigationSplitView {
-            List(selection: $selectedTab) {
+            List {
                 ForEach(Tab.allCases) { tab in
-                    NavigationLink(value: tab) {
+                    Button {
+                        selectedTab = tab
+                    } label: {
                         Label(tab.title, systemImage: tab.icon)
+                            .foregroundStyle(selectedTab == tab ? Color.accentColor : .primary)
                     }
                 }
             }

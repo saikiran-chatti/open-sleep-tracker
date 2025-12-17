@@ -107,7 +107,7 @@ struct RecordingsView: View {
 
 // MARK: - Summary Stats
 
-struct SummaryStatsView: View {
+fileprivate struct SummaryStatsView: View {
     let summary: RecordingSummary
 
     var body: some View {
@@ -377,7 +377,7 @@ struct RecordingDetailSheet: View {
 
 // MARK: - Summary Model
 
-private struct RecordingSummary {
+fileprivate struct RecordingSummary {
     let count: Int
     let uniqueNights: Int
     let totalDuration: String
